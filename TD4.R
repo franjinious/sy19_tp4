@@ -1,6 +1,6 @@
 library(MASS)
-reg <- read.table('D:/ÎÄµµ/SY19/TD/TD4/TPN1_a22_reg_app.txt', header = TRUE)
-class <- read.table('D:/ÎÄµµ/SY19/TD/TD4/TPN1_a22_clas_app.txt', header = TRUE)
+reg <- read.table('D:/æ–‡æ¡£/SY19/TD/TD4/TPN1_a22_reg_app.txt', header = TRUE)
+class <- read.table('D:/æ–‡æ¡£/SY19/TD/TD4/TPN1_a22_clas_app.txt', header = TRUE)
 
 plot(reg[,1:10], reg$y)
 percentage <- 2/3
@@ -21,6 +21,7 @@ boxplot(as.data.frame(reg[1:100]))
 library(pls)
 pcr_model <- pcr(y~., data = x.test_reg, validation = "CV")
 validationplot(pcr_model, val.type="MSEP")
+#On rejette cette mÃ©thode car on peut voir sur la graphe qu'il faut toutes les variables pour avoir le meilleur modÃ¨le.
 
 
 #modele lineare#
@@ -47,7 +48,7 @@ mse.knn1 <- mean((reg.knn1$pred - y.test_reg) ^ 2)
 
 
 #Subset selection
-#Vu qu'il existe trop de variables, nous pourrions pas utiliser la m¨¦thode best subset selection
+#Vu qu'il existe trop de variables, nous pourrions pas utiliser la mÃ©thode best subset selection
 
 #forward selection
 library(leaps)
@@ -99,7 +100,7 @@ reg.subset.backward.err <- rstandard(reg.subset.backward.lm)
 plot(reg.subset.backward.train$y, reg.subset.backward.err)
 abline(0, 0)
 
-#Puisque la m¨¦thode backward selection est mieux, 
+#Puisque la mÃ©thode backward selection est mieux, 
 #nous utilisons le regroupement des variables pour refaire k plus proches voisins
 reg.knn2 <- knn.reg(train = reg.subset.backward.train[, c(-66)], test = reg.subset.backward.test[, c(-66)], y = reg.subset.backward.train[,c(66)], k = kmin)
 mse.knn2 <- mean((reg.knn2$pred - y.test_reg) ^ 2)
@@ -129,20 +130,20 @@ mse.lasso <- mean((lasso.predict - y.test) ^ 2)
 
 classifieur <- function(dataset) {
   
-  # Chargement de l¡¯environnement
+  # Chargement de lâ€™environnement
   load("env.Rdata")
-  # Mon algorithme qui renvoie les pr¨¦dictions sur le jeu de donn¨¦es
-  # ¡®dataset¡® fourni en argument.
+  # Mon algorithme qui renvoie les prÃ©dictions sur le jeu de donnÃ©es
+  # â€˜datasetâ€˜ fourni en argument.
   # ...
   return(predictions)
 }
 
 
 regresseur <- function(dataset) {
-  # Chargement de l¡¯environnement
+  # Chargement de lâ€™environnement
   load("env.Rdata")
-  # Mon algorithme qui renvoie les pr¨¦dictions sur le jeu de donn¨¦es
-  # ¡®dataset¡® fourni en argument.
+  # Mon algorithme qui renvoie les prÃ©dictions sur le jeu de donnÃ©es
+  # â€˜datasetâ€˜ fourni en argument.
   # ...
   return(predictions)
 }

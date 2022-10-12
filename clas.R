@@ -52,7 +52,7 @@ n_tot <- dim(TPN1_a22_clas_app)[1]
 barplot(table(TPN1_a22_clas_app$y))
 
 tmp <- max(table(TPN1_a22_clas_app$y)/n_tot)
-tmp #le taux de success minimum
+tmp #le taux de succès minimum 
 1-tmp #le taux d'erreur maximum
 
 
@@ -61,7 +61,7 @@ tmp #le taux de success minimum
 
 
 
-# Training & test set prepration -------------------------------------------------
+# Training & test set preparation -------------------------------------------------
 
 n_tot <- dim(TPN1_a22_clas_app)[1]
 n_app <- round(n_tot* 4/5)
@@ -85,10 +85,12 @@ knn_fit <- knn(train = scale(data_app[,1:50]),
                k = knn_k,
                prob = TRUE)
 knn_perf <- table(data_tst$y, knn_fit)
-knn_perf
+knn_perf # matrice de confusion
 
-sum (diag(knn_perf)) / n_tst #taux d'success ;0.58
-1-sum (diag(knn_perf)) / n_tst #taux d'erreur:0.42
+cat("taux de succès:")
+sum (diag(knn_perf)) / n_tst# taux de succès
+cat("taux d'erreur:")
+1-sum (diag(knn_perf)) / n_tst # taux d'erreur
 
 
 
@@ -97,6 +99,7 @@ sum (diag(knn_perf)) / n_tst #taux d'success ;0.58
 # KNN with K from 1 to Kmax -----------------------------------------------
 
 knn_k_max <- 100
+
 tmp <- sapply(1:knn_k_max, function(local_k){
   local_fit <- knn(train = scale(data_app[,1:50]),
                    test  = scale(data_tst[,1:50]),
@@ -117,11 +120,11 @@ plot(1:knn_k_max, knn_MSE_scale,
      xlab='k', ylab='MSE', lty = 1, pch = 1)
 
 
-#MSE augumante en ~K=45
+#MSE augmente en ~K=45
 
 which.min(knn_MSE_scale)
 min(knn_MSE_scale)
-#taux d'erreur minmial 0.38 with k =31
+#taux d'erreur minimale 0.38 avec k =31
 
 
  # ajoute un rough pour groupe validation

@@ -1,10 +1,10 @@
 library(MASS)
-reg <- read.table('D:/ÎÄµµ/SY19/TD/TD4/TPN1_a22_reg_app.txt', header = TRUE)
-class <- read.table('D:/ÎÄµµ/SY19/TD/TD4/TPN1_a22_clas_app.txt', header = TRUE)
+reg <- read.table('D:/æ–‡æ¡£/SY19/TD/TD4/TPN1_a22_reg_app.txt', header = TRUE)
+class <- read.table('D:/æ–‡æ¡£/SY19/TD/TD4/TPN1_a22_clas_app.txt', header = TRUE)
 
 #plot(reg[,1:10], reg$y)
 
-#S¨¦paration des partie train et test
+#SÃ©paration des partie train et test
 percentage <- 2/3
 n_reg <- nrow(reg)
 ntrain_reg <- as.integer(n_reg * percentage)
@@ -16,21 +16,21 @@ x.test_reg <- reg[-train_reg,]
 y.test_reg <- reg[-train_reg, c(101)]
 y.app_reg <- reg[train_reg, c(101)]
 
-#Regarder la plage des donn¨¦es
+#Regarder la plage des donnÃ©es
 boxplot(as.data.frame(reg[1:100]))
 
 
 #pca
 library(pls)
 pcr_model <- pcr(y~., data = x.test_reg, validation = "CV")
-validationplot(pcr_model, val.type="MSEP")#D'apr¨¨s le graphe on constate qu'il faut toutes les variables pour obtenir le meilleur mod¨¨le
+validationplot(pcr_model, val.type="MSEP")#D'aprÃ¨s le graphe on constate qu'il faut toutes les variables pour obtenir le meilleur modÃ¨le
 
 
 #modele lineare#
 reg.lm <- lm(formula = y ~., data = x.app_reg)
-summary(reg.lm)#On a d¨¦j¨¤ une p-value qui est assez petite en une R-Square assez grande
+summary(reg.lm)#On a dÃ©jÃ  une p-value qui est assez petite en une R-Square assez grande
 res_std <- rstandard(reg.lm)
-plot(x = y.app_reg, y = res_std)#Les r¨¦sidus stadards parraissent pas mal
+plot(x = y.app_reg, y = res_std)#Les rÃ©sidus stadards parraissent pas mal
 abline(0, 0)
 pre.lm <- predict(reg.lm, newdata = x.test_reg)
 mse.lm <- mean((pre.lm - y.test_reg) ^ 2)#200.176
@@ -44,31 +44,71 @@ mse.lm1 <- mean((pre.lm - y.test_reg) ^ 2)#200.176
 
 
 #k plus proches voisins
-#On utilise les variables significatives dans le mod¨¨le lineaire
+#On utilise les variables significatives dans le modÃ¨le lineaire
 library(FNN)
 x.app_k <- x.app_reg[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), c(-101)] 
 y.app_k <- x.app_reg[, c(101)]
 x.test_k <- x.test_reg[, c(-101)]
+
+# Chenxin:add scale -------------------------------------------------------
+
+x.app_k.scale <- scale(x.app_reg[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), c(-101)] )
+x.test_k.scale <- scale(x.test_reg[, c(-101)])
+
+
 kmin <- 10
 reg.knn1 <- knn.reg(train = x.app_k, test = x.test_k, y = y.app_k, k = kmin)
 mse.knn1 <- mean((reg.knn1$pred - y.test_reg) ^ 2) #4167, trop grande
 
+# Chenxin K variation & scale -----------------------------------------------------------------
 
+knn_k_max <- 37
+
+tmp <- sapply(1:knn_k_max, function(local_k){
+  reg.knn.noscale <- knn.reg(train = x.app_k, test = x.test_k, y = y.app_k, k = local_k)
+  res <- mean((reg.knn.noscale$pred - y.test_reg) ^ 2)
+  return(res)
+})
+
+tmp.scale <- sapply(1:knn_k_max, function(local_k){
+  reg.knn.scale <- knn.reg(train = x.app_k.scale, test = x.test_k.scale, y = y.app_k, k = local_k)
+  res.scale <- mean((reg.knn.scale$pred - y.test_reg) ^ 2)
+  return(res.scale)
+})
+
+knn_MSE_noscale <- tmp
+knn_MSE_scale <- tmp.scale
+#erreur global
+plot(1:knn_k_max, knn_MSE_noscale, 
+     type='b', col='blue',
+     ylim=range(knn_MSE_scale),
+     xlab='k', ylab='MSE', lty = 1, pch = 1)
+
+lines(1:knn_k_max, knn_MSE_scale, type='b', col='red', lty = 1, pch = 1)
+which.min(knn_MSE_scale)
+min(knn_MSE_scale)
+which.min(knn_MSE_noscale)
+min(knn_MSE_noscale)
+
+#MSE Minimal in37 3707, MSE decrease with k increase  scale make no significatif difference
+
+
+# End Code Chenxin -------------------------------------------------------------
 #Subset selection
-#Vu qu'il existe trop de variables, nous pourrions pas utiliser la m¨¦thode best subset selection
+#Vu qu'il existe trop de variables, nous pourrions pas utiliser la mÃ©thode best subset selection
 
 #forward selection
 library(leaps)
 library(dplyr)
 reg.selection.forward <- regsubsets(y~., data = x.app_reg, method = "forward", nbest = 1, nvmax = 100)
 summary_forward <- summary(reg.selection.forward)
-plot(reg.selection.forward, scale = "adjr2")#Regarder bri¨¨vement la plus grande adjusted R Square
+plot(reg.selection.forward, scale = "adjr2")#Regarder briÃ¨vement la plus grande adjusted R Square
 
 rss<-data.frame(summary_forward$outmat, RSS=summary_forward$rss)
 rsquare_max_forward <- summary_forward$outmat[which.max(summary_forward$adjr2),]#La ligne avec la plus grande adjr2
 rsquare_max_forward[rsquare_max_forward == '*'] <- as.numeric(1)
 rsquare_max_forward[rsquare_max_forward == ' '] <- as.numeric(0)
-rsquare_max_forward <- as.numeric(rsquare_max_forward)#Le masque pour s¨¦lectionner les variables
+rsquare_max_forward <- as.numeric(rsquare_max_forward)#Le masque pour sÃ©lectionner les variables
 reg.subset.forward <- reg[c(rsquare_max_forward==1)]
 
 
@@ -159,7 +199,7 @@ for (i in (1:10)){
 }
 CV.min = min(CV)#181
 
-#Puisque la m¨¦thode backward selection est mieux, 
+#Puisque la mÃ©thode backward selection est mieux, 
 #nous utilisons le regroupement des variables pour refaire k plus proches voisins
 reg.knn2 <- knn.reg(train = reg.subset.backward.train[, c(-66)], test = reg.subset.backward.test[, c(-66)], y = reg.subset.backward.train[,c(66)], k = kmin)
 mse.knn2 <- mean((reg.knn2$pred - y.test_reg) ^ 2)#2226
@@ -189,20 +229,20 @@ mse.lasso <- mean((lasso.predict - y.test) ^ 2)#178
 
 classifieur <- function(dataset) {
   
-  # Chargement de l¡¯environnement
+  # Chargement de lâ€™environnement
   load("env.Rdata")
-  # Mon algorithme qui renvoie les pr¨¦dictions sur le jeu de donn¨¦es
-  # ¡®dataset¡® fourni en argument.
+  # Mon algorithme qui renvoie les prÃ©dictions sur le jeu de donnÃ©es
+  # â€˜datasetâ€˜ fourni en argument.
   # ...
   return(predictions)
 }
 
 
 regresseur <- function(dataset) {
-  # Chargement de l¡¯environnement
+  # Chargement de lâ€™environnement
   load("env.Rdata")
-  # Mon algorithme qui renvoie les pr¨¦dictions sur le jeu de donn¨¦es
-  # ¡®dataset¡® fourni en argument.
+  # Mon algorithme qui renvoie les prÃ©dictions sur le jeu de donnÃ©es
+  # â€˜datasetâ€˜ fourni en argument.
   # ...
   return(predictions)
 }

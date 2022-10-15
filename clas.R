@@ -26,7 +26,9 @@ pckToLoad = c('MASS'       , # QDA, LDQ
               'esquisse'   , # data visualisation 
               "GGally"     , 
               "glmnet"     , # lasso & ridge
-              "coefplot"     # get lasso & ridge coef more easily
+              "coefplot"   , # get lasso & ridge coef more easily
+              "leaps"      , # subset selection
+              "dplyr"      , # subset selection
               )
 reloadpck()
 
@@ -66,14 +68,18 @@ tmp #le taux de classes 2 ou 3
 # Training & test set preparation -------------------------------------------------
 
 n_clas <- dim(clas.set)[1]
-n_app <- round(n_clas* 4/5)
+train_percentage <- 4/5
+n_app <- round(n_clas* train_percentage)
 n_tst <- n_clas - n_app
 
 set.seed(19)
-id_app <- sample(1:n_clas, n_app)
+id_train <- sample(1:n_clas, n_app)
 
-data.train <- clas.set[  id_app,]
-data.test <- clas.set[- id_app,]
+data.train <- clas.set[  id_train,]
+data.test <- clas.set[- id_train,]
+y.test <- clas.set[-id_train, c(51)]
+y.train <- clas.set[id_train, c(51)]
+
 
 
 # Sélection de modèles ------------------------------------------------
@@ -84,9 +90,121 @@ summary(lm(y ~ X26+X44+X47+X40+X24+X19+X16+X5, data=data.train))
 cat("On peut déjà sélectionner cette formule avec ces coefficient car c'est le R² ajusté qui est le plus haut avec une RSS plus faible que le modèle avec tous les coefficients.")
 formula <- append(formula, y~X26+X44+X47+X40+X24+X19+X16+X5)
 
+
+#Subset selection
+#Vu qu'il existe trop de variables, nous pourrions pas utiliser la m??thode best subset selection
+
+#forward selection
+library(leaps)
+library(dplyr)
+reg.selection.forward <- regsubsets(y~., data = data.train, method = "forward", nbest = 1, nvmax = 100)
+summary_forward <- summary(reg.selection.forward)
+plot(reg.selection.forward, scale = "adjr2")#Regarder brièvement la plus grande adjusted R Square
+
+rss<-data.frame(summary_forward$outmat, RSS=summary_forward$rss)
+rsquare_max_forward <- summary_forward$outmat[which.max(summary_forward$adjr2),]#La ligne avec la plus grande adjr2
+rsquare_max_forward[rsquare_max_forward == '*'] <- as.numeric(1)
+rsquare_max_forward[rsquare_max_forward == ' '] <- as.numeric(0)
+rsquare_max_forward <- as.numeric(rsquare_max_forward)#Le masque pour s??lectionner les variables
+reg.subset.forward <- clas.set[c(rsquare_max_forward==1)]
+
+
+n.subset.forward <- nrow(reg.subset.forward)
+set.seed(69)
+n.subset.forward.train <- as.integer(train_percentage * n.subset.forward)
+n.subset.forward.sample <- sample(n.subset.forward, n.subset.forward.train)
+reg.subset.forward.train <- reg.subset.forward[n.subset.forward.sample,]
+reg.subset.forward.test <- reg.subset.forward[-n.subset.forward.sample,]
+reg.subset.forward.lm <- lm(formula = y~., data = reg.subset.forward.train)
+reg.subset.forward.lm.predict <- predict(reg.subset.forward.lm, newdata = reg.subset.forward.test)
+reg.subset.forward.mse <- mean((reg.subset.forward.lm.predict - reg.subset.forward.test$y) ^ 2)#188.44
+reg.subset.forward.err <- rstandard(reg.subset.forward.lm)
+plot(reg.subset.forward.train$y, reg.subset.forward.err)
+abline(0, 0)
+
+#backward selection
+reg.selection.backward <- regsubsets(y~., data = data.train, method = "backward", nbest = 1, nvmax = 100)
+summary_backward <- summary(reg.selection.backward)
+plot(reg.selection.backward, scale = "adjr2")
+#rss<-data.frame(summary_forward$outmat, RSS=summary_forward$rss)
+rsquare_max_backward <- summary_backward$outmat[which.max(summary_backward$adjr2),]
+rsquare_max_backward[rsquare_max_backward == '*'] <- as.numeric(1)
+rsquare_max_backward[rsquare_max_backward == ' '] <- as.numeric(0)
+rsquare_max_backward <- as.numeric(rsquare_max_backward)
+reg.subset.backward <- clas.set[c(rsquare_max_backward==1)]
+
+n.subset.backward <- nrow(reg.subset.backward)
+set.seed(69)
+n.subset.backward.train <- as.integer(train_percentage * n.subset.backward)
+n.subset.backward.sample <- sample(n.subset.backward, n.subset.backward.train)
+reg.subset.backward.train <- reg.subset.backward[n.subset.backward.sample,]
+reg.subset.backward.test <- reg.subset.backward[-n.subset.backward.sample,]
+reg.subset.backward.lm <- lm(formula = y~., data = reg.subset.backward.train)
+reg.subset.backward.lm.predict <- predict(reg.subset.backward.lm, newdata = reg.subset.backward.test)
+reg.subset.backward.mse <- mean((reg.subset.backward.lm.predict - reg.subset.backward.test$y) ^ 2)#186.92
+reg.subset.backward.err <- rstandard(reg.subset.backward.lm)
+plot(reg.subset.backward.train$y, reg.subset.backward.err)
+abline(0, 0)
+
+res.sum <- summary(reg.selection.backward)
+Adj.R2 = rss<-data.frame(res.sum$outmat, Adj.R2=res.sum$adjr2)
+BIC = rss<-data.frame(res.sum$outmat, BIC=res.sum$bic)
+
+
+cat("On obtient une MSE égale e une formule égale dans les deux types de sélections (~0.5097844)")
+
+
+
+#k-cross validation sur backward selection
+#avec
+FormulaBackward <- c(y~.-X2, 
+                     y~.-X2-X4, 
+                     y~.-X2-X4-X7, 
+                     y~.-X2-X4-X7-X8,
+                     y~.-X2-X4-X7-X8-X9,
+                     y~.-X2-X4-X7-X8-X9-X10,
+                     y~.-X2-X4-X7-X8-X9-X10-X11,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13, 
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14, 
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15, 
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20, 
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21, 
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32-X34,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32-X34-X35,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32-X34-X35-X36,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32-X34-X35-X36-X37,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32-X34-X35-X36-X37-X39,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32-X34-X35-X36-X37-X39-X43,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32-X34-X35-X36-X37-X39-X43-X45,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32-X34-X35-X36-X37-X39-X43-X45-X46,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32-X34-X35-X36-X37-X39-X43-X45-X46-X48,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32-X34-X35-X36-X37-X39-X43-X45-X46-X48-X49,
+                     y~.-X2-X4-X7-X8-X9-X10-X11-X12-X13-X14-X15-X18-X20-X21-X25-X27-X29-X31-X32-X34-X35-X36-X37-X39-X43-X45-X46-X48-X49-X50
+)
+
+K <- 10
+fold <- sample(K, n_train, replace = TRUE)
+CV <- rep(0, 10)
+for (i in (1:10)){
+  for (k in (1:K)){
+    reg.cross<-lm(FormulaBackward[[i]],data=clas.set[fold!=k,])
+    pred.cross <- predict(reg.cross, newdata=clas.set[fold == k,])
+    CV[i]<-CV[i]+ sum((clas.set$y[fold==k]-pred.cross)^2)
+  }
+  CV[i]<-CV[i] / n_reg
+}
+CV.min = min(CV)# 0.52
+
+formula <- append(formula, y ~ X1 + X3 + X5 + X6 + X16 + X17 + X19 + X22 + X23 + X24 + X26 + X28 + X30 + X33 + X38 + X40 + X41 + X42 + X44 + X47)
+
 clas.set$y <- as.factor(clas.set$y) #change Y  to factor pour les classifications
-
-
 
 
 # KNN with an arbitrary k ---------------------------------------------
@@ -224,10 +342,10 @@ library(glmnet)
 clas.set$y <- as.numeric(clas.set$y)
 x<-model.matrix(y~.,clas.set)
 y<clas.set$y
-x.train <- x[id_app,]
-y.train <- y[id_app]
-x.test <- x[-id_app,]
-y.test <- y[-id_app]
+x.train <- x[id_train,]
+y.train <- y[id_train]
+x.test <- x[-id_train,]
+y.test <- y[-id_train]
 
 cv.out.lasso <- cv.glmnet(x.train, y.train, alpha = 1)
 library(coefplot)

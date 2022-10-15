@@ -95,6 +95,7 @@ min(knn_MSE_noscale)
 # End Code Chenxin ---------------
 
 
+
 #Subset selection
 #Vu qu'il existe trop de variables, nous pourrions pas utiliser la m??thode best subset selection
 
@@ -186,7 +187,7 @@ Formula <- c(y~.-X2,
              y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73-X76-X77-X78-X79-X81-X85,
              y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73-X76-X77-X78-X79-X81-X85-X93,
              y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73-X76-X77-X78-X79-X81-X85-X93-X97
-             )
+)
 K <- 10
 fold <- sample(K, n_train, replace = TRUE)
 CV <- rep(0, 10)
@@ -246,3 +247,4 @@ regresseur <- function(dataset) {
   # ...
   return(predictions)
 }
+

@@ -1,50 +1,50 @@
 library(MASS)
-reg <- read.table('D:/ÎÄµµ/SY19/TD/TD4/TPN1_a22_reg_app.txt', header = TRUE)
-class <- read.table('D:/ÎÄµµ/SY19/TD/TD4/TPN1_a22_clas_app.txt', header = TRUE)
+reg.set <- read.table('TPN1_a22_reg_app.txt', header = TRUE)
+class <- read.table('TPN1_a22_clas_app.txt', header = TRUE)
 
-#plot(reg[,1:10], reg$y)
+#plot(reg.set[,1:10], reg.set$y)
 
-#S¨¦paration des partie train et test
+#S??paration des partie train et test
 percentage <- 2/3
-n_reg <- nrow(reg)
+n_reg <- nrow(reg.set)
 ntrain_reg <- as.integer(n_reg * percentage)
 ntest_reg <- n_reg - ntrain_reg
 set.seed(69)
 train_reg <- sample(n_reg, ntrain_reg)
-x.app_reg <- reg[train_reg,]
-x.test_reg <- reg[-train_reg,]
-y.test_reg <- reg[-train_reg, c(101)]
-y.app_reg <- reg[train_reg, c(101)]
+x.app_reg <- reg.set[train_reg,]
+x.test_reg <- reg.set[-train_reg,]
+y.test_reg <- reg.set[-train_reg, c(101)]
+y.app_reg <- reg.set[train_reg, c(101)]
 
-#Regarder la plage des donn¨¦es
-boxplot(as.data.frame(reg[1:100]))
+#Regarder la plage des donn??es
+boxplot(as.data.frame(reg.set[1:100]))
 
 
 #pca
 library(pls)
 pcr_model <- pcr(y~., data = x.test_reg, validation = "CV")
-validationplot(pcr_model, val.type="MSEP")#D'apr¨¨s le graphe on constate qu'il faut toutes les variables pour obtenir le meilleur mod¨¨le
+validationplot(pcr_model, val.type="MSEP")#D'apr??s le graphe on constate qu'il faut toutes les variables pour obtenir le meilleur mod??le
 
 
 #modele lineare#
-reg.lm <- lm(formula = y ~., data = x.app_reg)
-summary(reg.lm)#On a d¨¦j¨¤ une p-value qui est assez petite en une R-Square assez grande
+reg.set.lm <- lm(formula = y ~., data = x.app_reg)
+summary(reg.lm)#On a d??j?? une p-value qui est assez petite en une R-Square assez grande
 res_std <- rstandard(reg.lm)
-plot(x = y.app_reg, y = res_std)#Les r¨¦sidus stadards parraissent pas mal
+plot(x = y.app_reg, y = res_std)#Les r??sidus stadards parraissent pas mal
 abline(0, 0)
 pre.lm <- predict(reg.lm, newdata = x.test_reg)
 mse.lm <- mean((pre.lm - y.test_reg) ^ 2)#200.176
 #On refait la regression avec les variables significatives
 x.app.lm <- x.app_reg[c(6, 11, 12, 15, 17,22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), ] 
 x.test.lm <- x.test_reg[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), ]
-reg.lm.revise <- lm(formula = y~. , data = x.app.lm)
+reg.set.lm.revise <- lm(formula = y~. , data = x.app.lm)
 pre.lm.revise <- predict(reg.lm.revise, newdata = x.test.lm)
 mse.lm1 <- mean((pre.lm - y.test_reg) ^ 2)#200.176
 
 
 
 #k plus proches voisins
-#On utilise les variables significatives dans le mod¨¨le lineaire
+#On utilise les variables significatives dans le mod??le lineaire
 library(FNN)
 x.app_k <- x.app_reg[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), c(-101)] 
 y.app_k <- x.app_reg[, c(101)]
@@ -55,21 +55,21 @@ mse.knn1 <- mean((reg.knn1$pred - y.test_reg) ^ 2) #4167, trop grande
 
 
 #Subset selection
-#Vu qu'il existe trop de variables, nous pourrions pas utiliser la m¨¦thode best subset selection
+#Vu qu'il existe trop de variables, nous pourrions pas utiliser la m??thode best subset selection
 
 #forward selection
 library(leaps)
 library(dplyr)
 reg.selection.forward <- regsubsets(y~., data = x.app_reg, method = "forward", nbest = 1, nvmax = 100)
 summary_forward <- summary(reg.selection.forward)
-plot(reg.selection.forward, scale = "adjr2")#Regarder bri¨¨vement la plus grande adjusted R Square
+plot(reg.selection.forward, scale = "adjr2")#Regarder bri??vement la plus grande adjusted R Square
 
 rss<-data.frame(summary_forward$outmat, RSS=summary_forward$rss)
 rsquare_max_forward <- summary_forward$outmat[which.max(summary_forward$adjr2),]#La ligne avec la plus grande adjr2
 rsquare_max_forward[rsquare_max_forward == '*'] <- as.numeric(1)
 rsquare_max_forward[rsquare_max_forward == ' '] <- as.numeric(0)
-rsquare_max_forward <- as.numeric(rsquare_max_forward)#Le masque pour s¨¦lectionner les variables
-reg.subset.forward <- reg[c(rsquare_max_forward==1)]
+rsquare_max_forward <- as.numeric(rsquare_max_forward)#Le masque pour s??lectionner les variables
+reg.subset.forward <- reg.set[c(rsquare_max_forward==1)]
 
 
 n.subset.forward <- nrow(reg.subset.forward)
@@ -94,7 +94,7 @@ rsquare_max_backward <- summary_backward$outmat[which.max(summary_backward$adjr2
 rsquare_max_backward[rsquare_max_backward == '*'] <- as.numeric(1)
 rsquare_max_backward[rsquare_max_backward == ' '] <- as.numeric(0)
 rsquare_max_backward <- as.numeric(rsquare_max_backward)
-reg.subset.backward <- reg[c(rsquare_max_backward==1)]
+reg.subset.backward <- reg.set[c(rsquare_max_backward==1)]
 
 n.subset.backward <- nrow(reg.subset.backward)
 set.seed(69)
@@ -151,15 +151,15 @@ fold <- sample(K, ntrain_reg, replace = TRUE)
 CV <- rep(0, 10)
 for (i in (1:10)){
   for (k in (1:K)){
-    reg.cross<-lm(Formula[[i]],data=reg[fold!=k,])
-    pred.cross <- predict(reg.cross, newdata=reg[fold == k,])
+    reg.cross<-lm(Formula[[i]],data=reg.set[fold!=k,])
+    pred.cross <- predict(reg.cross, newdata=reg.set[fold == k,])
     CV[i]<-CV[i]+ sum((reg$y[fold==k]-pred.cross)^2)
   }
   CV[i]<-CV[i] / n_reg
 }
 CV.min = min(CV)#181
 
-#Puisque la m¨¦thode backward selection est mieux, 
+#Puisque la m??thode backward selection est mieux, 
 #nous utilisons le regroupement des variables pour refaire k plus proches voisins
 reg.knn2 <- knn.reg(train = reg.subset.backward.train[, c(-66)], test = reg.subset.backward.test[, c(-66)], y = reg.subset.backward.train[,c(66)], k = kmin)
 mse.knn2 <- mean((reg.knn2$pred - y.test_reg) ^ 2)#2226
@@ -186,23 +186,22 @@ fit.lasso <- glmnet(x.train, y.train, lambda = cv.out.lasso$lambda.min, alpha = 
 lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = x.test)
 mse.lasso <- mean((lasso.predict - y.test) ^ 2)#178
 
-
 classifieur <- function(dataset) {
   
-  # Chargement de l¡¯environnement
+  # Chargement de l??environnement
   load("env.Rdata")
-  # Mon algorithme qui renvoie les pr¨¦dictions sur le jeu de donn¨¦es
-  # ¡®dataset¡® fourni en argument.
+  # Mon algorithme qui renvoie les pr??dictions sur le jeu de donn??es
+  # ??dataset?? fourni en argument.
   # ...
   return(predictions)
 }
 
 
 regresseur <- function(dataset) {
-  # Chargement de l¡¯environnement
+  # Chargement de l??environnement
   load("env.Rdata")
-  # Mon algorithme qui renvoie les pr¨¦dictions sur le jeu de donn¨¦es
-  # ¡®dataset¡® fourni en argument.
+  # Mon algorithme qui renvoie les pr??dictions sur le jeu de donn??es
+  # ??dataset?? fourni en argument.
   # ...
   return(predictions)
 }

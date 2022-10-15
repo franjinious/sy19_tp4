@@ -230,7 +230,7 @@ mse.lasso <- mean((lasso.predict - y.test) ^ 2)#178
 
 classifieur <- function(dataset) {
   
-  # Chargement de l’environnement mmmmmmmm
+  # Chargement de l’environnement 
   load("env.Rdata")
   # Mon algorithme qui renvoie les prédictions sur le jeu de données
   # ‘dataset‘ fourni en argument.

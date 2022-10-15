@@ -85,6 +85,7 @@ plot(1:knn_k_max, knn_MSE_noscale,
      xlab='k', ylab='MSE', lty = 1, pch = 1)
 
 lines(1:knn_k_max, knn_MSE_scale, type='b', col='red', lty = 1, pch = 1)
+
 which.min(knn_MSE_scale)
 min(knn_MSE_scale)
 which.min(knn_MSE_noscale)
@@ -229,7 +230,7 @@ mse.lasso <- mean((lasso.predict - y.test) ^ 2)#178
 
 classifieur <- function(dataset) {
   
-  # Chargement de l’environnement
+  # Chargement de l’environnement mmmmmmmm
   load("env.Rdata")
   # Mon algorithme qui renvoie les prédictions sur le jeu de données
   # ‘dataset‘ fourni en argument.

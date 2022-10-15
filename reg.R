@@ -44,14 +44,56 @@ mse.lm1 <- mean((pre.lm - y.test_reg) ^ 2)#200.176
 
 
 #k plus proches voisins
-#On utilise les variables significatives dans le mod??le lineaire
+#On utilise les variables significatives dans le modèle lineaire
 library(FNN)
 x.app_k <- x.app_reg[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), c(-101)] 
 y.app_k <- x.app_reg[, c(101)]
 x.test_k <- x.test_reg[, c(-101)]
+
+# Chenxin:add scale -------------------------------------------------------
+
+x.app_k.scale <- scale(x.app_reg[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), c(-101)] )
+x.test_k.scale <- scale(x.test_reg[, c(-101)])
+
+
 kmin <- 10
 reg.knn1 <- knn.reg(train = x.app_k, test = x.test_k, y = y.app_k, k = kmin)
 mse.knn1 <- mean((reg.knn1$pred - y.test_reg) ^ 2) #4167, trop grande
+
+# Chenxin K variation & scale -----------------------------------------------------------------
+
+knn_k_max <- 37
+
+tmp <- sapply(1:knn_k_max, function(local_k){
+  reg.knn.noscale <- knn.reg(train = x.app_k, test = x.test_k, y = y.app_k, k = local_k)
+  res <- mean((reg.knn.noscale$pred - y.test_reg) ^ 2)
+  return(res)
+})
+
+tmp.scale <- sapply(1:knn_k_max, function(local_k){
+  reg.knn.scale <- knn.reg(train = x.app_k.scale, test = x.test_k.scale, y = y.app_k, k = local_k)
+  res.scale <- mean((reg.knn.scale$pred - y.test_reg) ^ 2)
+  return(res.scale)
+})
+
+knn_MSE_noscale <- tmp
+knn_MSE_scale <- tmp.scale
+#erreur global
+plot(1:knn_k_max, knn_MSE_noscale, 
+     type='b', col='blue',
+     ylim=range(knn_MSE_scale),
+     xlab='k', ylab='MSE', lty = 1, pch = 1)
+
+lines(1:knn_k_max, knn_MSE_scale, type='b', col='red', lty = 1, pch = 1)
+which.min(knn_MSE_scale)
+min(knn_MSE_scale)
+which.min(knn_MSE_noscale)
+min(knn_MSE_noscale)
+
+#MSE Minimal in37 3707, MSE decrease with k increase  scale make no significatif difference
+
+
+# End Code Chenxin ---------------
 
 
 #Subset selection

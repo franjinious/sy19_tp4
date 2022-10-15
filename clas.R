@@ -21,10 +21,13 @@ pckToLoad = c('MASS'       , # QDA, LDQ
               'naivebayes' , # for naive QDA (a.k.a naive Bayes)
               'nnet'       , # Multinomial logistic regression
               'FNN'        , # Fast KNN algo
-              # 'pROC'    , # ROC curve
+              'pROC'    , # ROC curve
               'tidyverse'  , # a collection of Rpack for data science
               'esquisse'   , # data visualisation 
-              "GGally") 
+              "GGally"     , 
+              "glmnet"     , # lasso & ridge
+              "coefplot"     # get lasso & ridge coef more easily
+              )
 reloadpck()
 
 
@@ -37,7 +40,6 @@ reloadpck()
 
 clas.set <- read.csv("TPN1_a22_clas_app.txt", sep="")
 str(clas.set) 
-clas.set$y <- as.factor(clas.set$y) #change Y  to factor si non c'est int
 
 # END Import data ---------------------------------------------------------
 
@@ -51,7 +53,7 @@ NROW(clas.set)
 n_clas <- dim(clas.set)[1]
 barplot(table(clas.set$y))
 
-tmp <- max(table(clas.set$y)/n_tot)
+tmp <- max(table(clas.set$y)/n_clas)
 tmp #le taux de classes 2 ou 3
 1-tmp 
 
@@ -63,15 +65,27 @@ tmp #le taux de classes 2 ou 3
 
 # Training & test set preparation -------------------------------------------------
 
-n_tot <- dim(clas.set)[1]
-n_app <- round(n_tot* 4/5)
-n_tst <- n_tot - n_app
+n_clas <- dim(clas.set)[1]
+n_app <- round(n_clas* 4/5)
+n_tst <- n_clas - n_app
 
 set.seed(19)
-id_app <- sample(1:n_tot, n_app)
+id_app <- sample(1:n_clas, n_app)
 
 data.train <- clas.set[  id_app,]
 data.test <- clas.set[- id_app,]
+
+
+# Sélection de modèles ------------------------------------------------
+
+summary(lm(y~., data=data.train))
+formula <- c(y~.)
+summary(lm(y ~ X26+X44+X47+X40+X24+X19+X16+X5, data=data.train))
+cat("On peut déjà sélectionner cette formule avec ces coefficient car c'est le R² ajusté qui est le plus haut avec une RSS plus faible que le modèle avec tous les coefficients.")
+formula <- append(formula, y~X26+X44+X47+X40+X24+X19+X16+X5)
+
+clas.set$y <- as.factor(clas.set$y) #change Y  to factor pour les classifications
+
 
 
 
@@ -153,7 +167,7 @@ err.qda
 K<-10
 CV=0
 CV2=0
-folds=sample(1:K,n_tot,replace=TRUE)
+folds=sample(1:K,n_clas,replace=TRUE)
 for(k in (1:K)){
   class<-qda(y~.,data=clas.set[folds!=k,])
   pred<-predict(class,newdata=clas.set[folds==k,])
@@ -192,6 +206,8 @@ err.lda
 
 # Naive bayes -------------------------------------------------------------
 
+data.train$y <- factor(data.train$y)
+
 fit.naiveqda  <- naive_bayes(y ~ ., data=data.train)
 pred.naiveqda <- predict(fit.naiveqda, newdata=data.test[1:50])
 perf.naiveqda <- table(data.test$y, pred.naiveqda)
@@ -205,15 +221,16 @@ err.naiveqda
 # Naive bayes AFTER lasso coefficient selection -------------------------
 
 library(glmnet)
-x<-model.matrix(y~.,class)
-y<-class$y
+clas.set$y <- as.numeric(clas.set$y)
+x<-model.matrix(y~.,clas.set)
+y<clas.set$y
 x.train <- x[id_app,]
 y.train <- y[id_app]
 x.test <- x[-id_app,]
 y.test <- y[-id_app]
 
 cv.out.lasso <- cv.glmnet(x.train, y.train, alpha = 1)
-# library(coefplot)
+library(coefplot)
 coefs_extracted<-extract.coef(cv.out.lasso)
 coefs<-row.names(coefs_extracted)[-1]
 plot(cv.out.lasso)
@@ -229,7 +246,7 @@ sum(diag(perf.naiveqda)) / n_tst
 err.naiveqda <- 1-sum(diag(perf.naiveqda)) / n_tst
 cat("taux d'erreur avec LDA:")
 err.naiveqda
-car("L'erreur est encore plus grande et la sélection de coefficient par lasso n'a pas fonctionné.")
+cat("L'erreur est encore plus grande et la sélection de coefficient par lasso n'a pas fonctionné.")
 
 
 

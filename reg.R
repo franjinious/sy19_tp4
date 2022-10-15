@@ -4,7 +4,7 @@ class <- read.table('TPN1_a22_clas_app.txt', header = TRUE)
 
 #plot(reg.set[,1:10], reg.set$y)
 
-#S??paration des partie train et test
+#Séparation des partie train et test
 percentage <- 2/3
 n_reg <- nrow(reg.set)
 ntrain_reg <- as.integer(n_reg * percentage)
@@ -16,7 +16,7 @@ x.test_reg <- reg.set[-train_reg,]
 y.test_reg <- reg.set[-train_reg, c(101)]
 y.app_reg <- reg.set[train_reg, c(101)]
 
-#Regarder la plage des donn??es
+#Regarder la plage des données
 boxplot(as.data.frame(reg.set[1:100]))
 
 

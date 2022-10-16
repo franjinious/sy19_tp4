@@ -27,11 +27,7 @@ validationplot(pcr_model, val.type="MSEP")#D'apr??s le graphe on constate qu'il 
 
 #modele lineare#
 reg.set.lm <- lm(formula = y ~., data = data.train)
-<<<<<<< HEAD
 summary(reg.set.lm)#On a d??j?? une p-value qui est assez petite en une R-Square assez grande
-=======
-summary(reg.lm)#On a d??j?? une p-value qui est assez petite en une R-Square assez grande
->>>>>>> c80299899505274ed9ec4a6992953b4fbb7c4c5a
 res_std <- rstandard(reg.set.lm)
 plot(x = y.train, y = res_std)#Les r??sidus stadards parraissent pas mal
 abline(0, 0)

@@ -28,7 +28,7 @@ pckToLoad = c('MASS'       , # QDA, LDQ
               "glmnet"     , # lasso & ridge
               "coefplot"   , # get lasso & ridge coef more easily
               "leaps"      , # subset selection
-              "dplyr"      , # subset selection
+              "dplyr"        # subset selection
               )
 reloadpck()
 

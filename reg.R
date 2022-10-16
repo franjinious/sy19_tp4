@@ -195,7 +195,7 @@ for (i in (1:10)){
   for (k in (1:K)){
     reg.cross<-lm(Formula[[i]],data=reg.set[fold!=k,])
     pred.cross <- predict(reg.cross, newdata=reg.set[fold == k,])
-    CV[i]<-CV[i]+ sum((reg$y[fold==k]-pred.cross)^2)
+    CV[i]<-CV[i]+ sum((reg.set$y[fold==k]-pred.cross)^2)
   }
   CV[i]<-CV[i] / n_reg
 }
@@ -208,8 +208,8 @@ mse.knn2 <- mean((reg.knn2$pred - y.test) ^ 2)#2226
 
 #Ridge regression
 library(glmnet)
-x<-model.matrix(y~.,reg)
-y<-reg$y
+x<-model.matrix(y~.,reg.set)
+y<-reg.set$y
 data.train <- x[id_train,]
 y.train <- y[id_train]
 data.test <- x[-id_train,]

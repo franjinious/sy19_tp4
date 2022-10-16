@@ -28,7 +28,7 @@ validationplot(pcr_model, val.type="MSEP")#D'apr??s le graphe on constate qu'il 
 #modele lineare#
 reg.set.lm <- lm(formula = y ~., data = data.train)
 summary(reg.lm)#On a d??j?? une p-value qui est assez petite en une R-Square assez grande
-res_std <- rstandard(reg.lm)
+res_std <- rstandard(reg.set.lm)
 plot(x = y.train, y = res_std)#Les r??sidus stadards parraissent pas mal
 abline(0, 0)
 pre.lm <- predict(reg.set.lm, newdata = data.test)
@@ -152,7 +152,7 @@ for (i in (1:10)){
   for (k in (1:K)){
     reg.cross<-lm(Formula[[i]],data=reg.set[fold!=k,])
     pred.cross <- predict(reg.cross, newdata=reg.set[fold == k,])
-    CV[i]<-CV[i]+ sum((reg$y[fold==k]-pred.cross)^2)
+    CV[i]<-CV[i]+ sum((reg.set$y[fold==k]-pred.cross)^2)
   }
   CV[i]<-CV[i] / n_reg
 }
@@ -165,8 +165,8 @@ mse.knn2 <- mean((reg.knn2$pred - y.test) ^ 2)#2226
 
 #Ridge regression
 library(glmnet)
-x<-model.matrix(y~.,reg)
-y<-reg$y
+x<-model.matrix(y~.,reg.set)
+y<-reg.set$y
 data.train <- x[id_train,]
 y.train <- y[id_train]
 data.test <- x[-id_train,]

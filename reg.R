@@ -206,35 +206,57 @@ CV.min = min(CV)#181
 reg.knn2 <- knn.reg(train = reg.subset.backward.train[, c(-66)], test = reg.subset.backward.test[, c(-66)], y = reg.subset.backward.train[,c(66)], k = kmin)
 mse.knn2 <- mean((reg.knn2$pred - y.test) ^ 2)#2226
 
-#Ridge regression
+#Préparation de données pour Ridge et Lasso
 library(glmnet)
 x<-model.matrix(y~.,reg.set)
 y<-reg.set$y
-data.train <- x[id_train,]
-y.train <- y[id_train]
-data.test <- x[-id_train,]
-y.test <- y[-id_train]
+data.train.regu <- x[id_train,]
+y.train.regu <- y[id_train]
+data.test.regu <- x[-id_train,]
+y.test.regu <- y[-id_train]
 
-cv.out.ridge <- cv.glmnet(data.train, y.train, alpha = 0)
+#Ridge regression
+cv.out.ridge <- cv.glmnet(data.train.regu, y.train.regu, alpha = 0)
 plot(cv.out.ridge)
-fit.ridge <- glmnet(data.train, y.train, lambda = cv.out.ridge$lambda.min, alpha = 0)
-ridge.predict <- predict(fit.ridge, s = cv.out.ridge$lambda.min, newx = data.test)
-mse.ridge <- mean((ridge.predict - y.test) ^ 2)#200.44
+fit.ridge <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.ridge$lambda.min, alpha = 0)
+ridge.predict <- predict(fit.ridge, s = cv.out.ridge$lambda.min, newx = data.test.regu)
+mse.ridge <- mean((ridge.predict - y.test.regu) ^ 2)#200.44
 
 #lasso
-cv.out.lasso <- cv.glmnet(data.train, y.train, alpha = 1)
+cv.out.lasso <- cv.glmnet(data.train.regu, y.train.regu, alpha = 1)
 plot(cv.out.lasso)
-fit.lasso <- glmnet(data.train, y.train, lambda = cv.out.lasso$lambda.min, alpha = 1)
-lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = data.test)
-mse.lasso <- mean((lasso.predict - y.test) ^ 2)#178
+fit.lasso <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.lasso$lambda.min, alpha = 1)
+lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = data.test.regu)
+mse.lasso <- mean((lasso.predict - y.test.regu) ^ 2)#178
 
 
 regresseur <- function(dataset) {
-  # Chargement de l??environnement
-  load("env.Rdata")
-  # Mon algorithme qui renvoie les pr??dictions sur le jeu de donn??es
-  # ??dataset?? fourni en argument.
-  # ...
+  #load("env.Rdata")
+  library(glmnet)
+  train.percentage <- 2/3
+  n_reg <- nrow(reg.set)
+  n_train <- as.integer(n_reg * train.percentage)
+  n_test <- n_reg - n_train
+  set.seed(69)
+  id_train <- sample(n_reg, n_train)
+  
+  
+  x<-model.matrix(y~.,reg.set)
+  y<-reg.set$y
+  data.train.regu <- x[id_train,]
+  y.train.regu <- y[id_train]
+  data.test.regu <- x[-id_train,]
+  y.test.regu <- y[-id_train]
+  
+  
+  cv.out.lasso <- cv.glmnet(data.train.regu, y.train.regu, alpha = 1)
+  plot(cv.out.lasso)
+  fit.lasso <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.lasso$lambda.min, alpha = 1)
+  predictions <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = data.test.regu)
+  mse.lasso <- mean((predictions - y.test.regu) ^ 2)#178
+  print("La MSE est:")
+  print(mse.lasso)
   return(predictions)
 }
+pred <- regresseur(reg.set)
 

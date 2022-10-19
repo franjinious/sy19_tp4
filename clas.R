@@ -1,8 +1,9 @@
-#CLASSFICATION -----------------------------------------------------------
-  
-  
-  
-  # SETUP -------------------------------------------------------------------
+
+# CLASSFICATION -----------------------------------------------------------
+
+
+
+# SETUP -------------------------------------------------------------------
 
 ipak <- function(pkg){
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
@@ -28,7 +29,7 @@ pckToLoad = c('MASS'       , # QDA, LDQ
               "coefplot"   , # get lasso & ridge coef more easily
               "leaps"      , # subset selection
               "dplyr"        # subset selection
-)
+              )
 reloadpck()
 
 
@@ -86,8 +87,7 @@ y.train <- clas.set[id_train, c(51)]
 summary(lm(y~., data=data.train))
 formula <- c(y~.)
 summary(lm(y ~ X26+X44+X47+X40+X24+X19+X16+X5, data=data.train))
-cat("On peut déjà sélectionner cette formule avec ces coefficient car 
-    c'est le R² ajusté qui est le plus haut avec une RSS plus faible que le modèle avec tous les coefficients.")
+cat("On peut déjà sélectionner cette formule avec ces coefficient car c'est le R² ajusté qui est le plus haut avec une RSS plus faible que le modèle avec tous les coefficients.")
 formula <- append(formula, y~X26+X44+X47+X40+X24+X19+X16+X5)
 
 
@@ -264,7 +264,7 @@ cat("Ce taux d'erreur est minimal pour K=")
 which.min(err.knn_scale)
 #taux d'erreur minimal
 
-# ajoute un rouge pour groupe validation
+ # ajoute un rouge pour groupe validation
 
 # Parametric methods ------------------------------------------------------
 
@@ -291,10 +291,10 @@ for(k in (1:K)){
   pred<-predict(class,newdata=clas.set[folds==k,])
   conf <- table(clas.set[folds==k,]$y, pred$class)
   CV<-CV+1-sum(diag(conf))/nrow(clas.set[folds==k,])
-  #  class<-qda(y~.,data=clas.set[folds==k,])
-  #  pred<-predict(class,newdata=clas.set[folds==k,])
-  #  conf <- table(clas.set[folds==k,]$y, pred$class)
-  #  CV2<-CV2+1-sum(diag(conf))/nrow(clas.set[folds==k,])
+#  class<-qda(y~.,data=clas.set[folds==k,])
+#  pred<-predict(class,newdata=clas.set[folds==k,])
+#  conf <- table(clas.set[folds==k,]$y, pred$class)
+#  CV2<-CV2+1-sum(diag(conf))/nrow(clas.set[folds==k,])
 }
 CV<-CV/K
 #CV2<-CV2/K

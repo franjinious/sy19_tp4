@@ -341,7 +341,7 @@ err.naiveqda
 library(glmnet)
 clas.set$y <- as.numeric(clas.set$y)
 x<-model.matrix(y~.,clas.set)
-y<clas.set$y
+y<-clas.set$y
 x.train <- x[id_train,]
 y.train <- y[id_train]
 x.test <- x[-id_train,]
@@ -439,5 +439,4 @@ Z<-X%*%U
 
 
 plot(Z[,1],Z[,2],pch=clas.set$y,col=clas.set$y,xlab='Z1',ylab='Z2')
-
 

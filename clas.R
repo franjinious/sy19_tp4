@@ -17,7 +17,7 @@ reloadpck = function(reload = TRUE){
   }
 }
 
-pcklToLoad = c('MASS'       , # QDA, LDQ
+pckToLoad = c('MASS'       , # QDA, LDQ
               'naivebayes' , # for naive QDA (a.k.a naive Bayes)
               'nnet'       , # Multinomial logistic regression
               'FNN'        , # Fast KNN algo
@@ -68,12 +68,12 @@ tmp #le taux de classes 2 ou 3
 # Training & test set preparation -------------------------------------------------
 
 n_clas <- dim(clas.set)[1]
-train_percentage <- 4/5
+train_percentage <- 2/3
 n_train <- round(n_clas* train_percentage)
-n_test <- n_clas - n_app
+n_test <- n_clas - n_train
 
 set.seed(19)
-id_train <- sample(1:n_clas, n_app)
+id_train <- sample(1:n_clas, n_train)
 
 data.train <- clas.set[  id_train,]
 data.test <- clas.set[- id_train,]
@@ -191,8 +191,8 @@ FormulaBackward <- c(y~.-X2,
 
 K <- 10
 fold <- sample(K, n_train, replace = TRUE)
-CV <- rep(0, 10)
-for (i in (1:10)){
+CV <- rep(0, 30)
+for (i in (1:30)){
   for (k in (1:K)){
     reg.cross<-lm(FormulaBackward[[i]],data=clas.set[fold!=k,])
     pred.cross <- predict(reg.cross, newdata=clas.set[fold == k,])
@@ -200,11 +200,45 @@ for (i in (1:10)){
   }
   CV[i]<-CV[i] / n_clas
 }
+plot(CV)
+# ON voit bien l'utilité de la BackWard Selection
 CV.min = min(CV)# 0.52
 
 formula <- append(formula, y ~ X1 + X3 + X5 + X6 + X16 + X17 + X19 + X22 + X23 + X24 + X26 + X28 + X30 + X33 + X38 + X40 + X41 + X42 + X44 + X47)
 
 clas.set$y <- as.factor(clas.set$y) #change Y  to factor pour les classifications
+
+
+
+# Lasso
+
+library(glmnet)
+clas.set$y <- as.numeric(clas.set$y)
+x<-model.matrix(y~.,clas.set)
+y<-clas.set$y
+x.train <- x[id_train,]
+y.train <- y[id_train]
+x.test <- x[-id_train,]
+y.test <- y[-id_train]
+
+cv.out.lasso <- cv.glmnet(x.train, y.train, alpha = 1)
+library(coefplot)
+coefs_extracted<-extract.coef(cv.out.lasso)
+coefs<-row.names(coefs_extracted)[-1]
+coefs
+plot(cv.out.lasso)
+fit.lasso <- glmnet(x.train, y.train, lambda = cv.out.lasso$lambda.min, alpha = 1)
+lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = x.test)
+mse.lasso <- mean((lasso.predict - y.test) ^ 2)#178
+
+formula <- append(formula, y ~ X1 + X3 + X5 + X6 + X16 + X19 + X24 + X26 + X28 + X40 + X44 + X47)
+
+formula
+
+#1 all coef
+#2 significaative coef
+#3 Bakward selection
+#4 Lasso regression
 
 
 # KNN with an arbitrary k ---------------------------------------------
@@ -220,9 +254,9 @@ knn_perf <- table(data.test$y, knn_fit)
 knn_perf # matrice de confusion
 
 cat("taux de succès:")
-sum (diag(knn_perf)) / n_tst# taux de succès
+sum (diag(knn_perf)) / n_test# taux de succès
 cat("taux d'erreur:")
-err.knn10 <- 1-sum (diag(knn_perf)) / n_tst # taux d'erreur
+err.knn10 <- 1-sum (diag(knn_perf)) / n_test # taux d'erreur
 
 
 
@@ -239,7 +273,7 @@ tmp <- sapply(1:knn_k_max, function(local_k){
                    k = local_k,
                    prob = TRUE)
   local_perf <- table(data.test$y, local_fit)
-  res <- sum (diag(local_perf)) / n_tst
+  res <- sum (diag(local_perf)) / n_test
   return(res)
 })
 
@@ -275,29 +309,41 @@ fit.qda  <- qda(y ~ ., data=data.train)
 pred.qda <- predict(fit.qda, newdata=data.test)
 perf.qda <- table(data.test$y, pred.qda$class)
 perf.qda
-sum (diag(perf.qda)) / n_tst 
-err.qda <- 1-sum (diag(perf.qda)) / n_tst
+sum (diag(perf.qda)) / n_test 
+err.qda <- 1-sum (diag(perf.qda)) / n_test
 cat("Taux d'erreur avec QDA:")
 err.qda
 
 # KCV for QDA
 
 K<-10
-CV=0
-CV2=0
-folds=sample(1:K,n_clas,replace=TRUE)
-for(k in (1:K)){
-  class<-qda(y~.,data=clas.set[folds!=k,])
-  pred<-predict(class,newdata=clas.set[folds==k,])
-  conf <- table(clas.set[folds==k,]$y, pred$class)
-  CV<-CV+1-sum(diag(conf))/nrow(clas.set[folds==k,])
-#  class<-qda(y~.,data=clas.set[folds==k,])
-#  pred<-predict(class,newdata=clas.set[folds==k,])
-#  conf <- table(clas.set[folds==k,]$y, pred$class)
-#  CV2<-CV2+1-sum(diag(conf))/nrow(clas.set[folds==k,])
+err = rep(0,4)
+par(mfrow = c(2, 2))
+
+for (i in (1:4)){
+  CV <- rep(0,10)
+  folds=sample(1:K,n_clas,replace=TRUE)
+  for(k in (1:K)){
+    class<-qda(formula[[i]],data=clas.set[folds!=k,])
+    pred<-predict(class,newdata=clas.set[folds==k,])
+    conf <- table(clas.set[folds==k,]$y, pred$class)
+    CV[k]<-1-sum(diag(conf))/nrow(clas.set[folds==k,])
+    #  class<-qda(y~.,data=clas.set[folds==k,])
+    #  pred<-predict(class,newdata=clas.set[folds==k,])
+    #  conf <- table(clas.set[folds==k,]$y, pred$class)
+    #  CV2<-CV2+1-sum(diag(conf))/nrow(clas.set[folds==k,])
+  }
+  CV_mean<-mean(CV)
+  plot(CV, type="l")
+  err[i] <- CV_mean
+  print(formula[[i]])
+  print(err[i])
 }
-CV<-CV/K
-#CV2<-CV2/K
+err.qda = min(err)
+cat("Il faut choisir la formule initiale, avec un taux d'erreur d'environ 0.32")
+
+
+
 
 
 
@@ -308,15 +354,38 @@ fit.lda  <- lda(y ~ ., data=data.train)
 pred.lda <- predict(fit.lda, newdata=data.test)
 perf.lda <- table(data.test$y, pred.lda$class)
 perf.lda
-fit.lda  <- lda(y ~ ., data=data.train)
-pred.lda <- predict(fit.lda, newdata=data.test)
-perf.lda <- table(data.test$y, pred.lda$class)
-perf.lda
-sum(diag(perf.lda)) / n_tst
-err.lda <- 1-sum(diag(perf.lda)) / n_tst #erreur 0.34
+sum(diag(perf.lda)) / n_test
+err.lda <- 1-sum(diag(perf.lda)) / n_test #erreur 0.34
 cat("taux d'erreur avec LDA:")
 err.lda
 
+# KCV for LDA
+
+K<-10
+err = rep(0,4)
+par(mfrow = c(2, 2))
+
+for (i in (1:4)){
+  CV <- rep(0,10)
+  folds=sample(1:K,n_clas,replace=TRUE)
+  for(k in (1:K)){
+    class<-lda(formula[[i]],data=clas.set[folds!=k,])
+    pred<-predict(class,newdata=clas.set[folds==k,])
+    conf <- table(clas.set[folds==k,]$y, pred$class)
+    CV[k]<-1-sum(diag(conf))/nrow(clas.set[folds==k,])
+    #  class<-qda(y~.,data=clas.set[folds==k,])
+    #  pred<-predict(class,newdata=clas.set[folds==k,])
+    #  conf <- table(clas.set[folds==k,]$y, pred$class)
+    #  CV2<-CV2+1-sum(diag(conf))/nrow(clas.set[folds==k,])
+  }
+  CV_mean<-mean(CV)
+  plot(CV, type="l")
+  err[i] <- CV_mean
+  print(formula[[i]])
+  print(err[i])
+}
+err.lda = min(err)
+cat("Il faut choisir la formule initiale, avec un taux d'erreur d'environ 0.42")
 
 
 
@@ -330,42 +399,41 @@ fit.naiveqda  <- naive_bayes(y ~ ., data=data.train)
 pred.naiveqda <- predict(fit.naiveqda, newdata=data.test[1:50])
 perf.naiveqda <- table(data.test$y, pred.naiveqda)
 perf.naiveqda
-sum(diag(perf.naiveqda)) / n_tst
-err.naiveqda <- 1-sum(diag(perf.naiveqda)) / n_tst
+sum(diag(perf.naiveqda)) / n_test
+err.naiveqda <- 1-sum(diag(perf.naiveqda)) / n_test
 cat("taux d'erreur avec LDA:")
 err.naiveqda
 
+# KCV for naive Bayes
 
-# Naive bayes AFTER lasso coefficient selection -------------------------
+clas.set$y <- factor(clas.set$y)
 
-library(glmnet)
-clas.set$y <- as.numeric(clas.set$y)
-x<-model.matrix(y~.,clas.set)
-y<-clas.set$y
-x.train <- x[id_train,]
-y.train <- y[id_train]
-x.test <- x[-id_train,]
-y.test <- y[-id_train]
 
-cv.out.lasso <- cv.glmnet(x.train, y.train, alpha = 1)
-library(coefplot)
-coefs_extracted<-extract.coef(cv.out.lasso)
-coefs<-row.names(coefs_extracted)[-1]
-plot(cv.out.lasso)
-fit.lasso <- glmnet(x.train, y.train, lambda = cv.out.lasso$lambda.min, alpha = 1)
-lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = x.test)
-mse.lasso <- mean((lasso.predict - y.test) ^ 2)#178
+K<-10
+err = rep(0,4)
+par(mfrow = c(2, 2))
 
-fit.naiveqda  <- naive_bayes(y ~ X3 + X5 + X6 + X16 + X26 + X40 + X44 + X47, data=data.train)
-pred.naiveqda <- predict(fit.naiveqda, newdata=data.test[1:50])
-perf.naiveqda <- table(data.test$y, pred.naiveqda)
-perf.naiveqda
-sum(diag(perf.naiveqda)) / n_tst
-err.naiveqda <- 1-sum(diag(perf.naiveqda)) / n_tst
-cat("taux d'erreur avec LDA:")
-err.naiveqda
-cat("L'erreur est encore plus grande et la sélection de coefficient par lasso n'a pas fonctionné.")
-
+for (i in (1:4)){
+  CV <- rep(0,10)
+  folds=sample(1:K,n_clas,replace=TRUE)
+  for(k in (1:K)){
+    class<-naive_bayes(formula[[i]],data=clas.set[folds!=k,])
+    pred<-predict(class,newdata=clas.set[folds==k,][1:50])
+    conf <- table(clas.set[folds==k,]$y, pred)
+    CV[k]<-1-sum(diag(conf))/nrow(clas.set[folds==k,])
+    #  class<-qda(y~.,data=clas.set[folds==k,])
+    #  pred<-predict(class,newdata=clas.set[folds==k,])
+    #  conf <- table(clas.set[folds==k,]$y, pred$class)
+    #  CV2<-CV2+1-sum(diag(conf))/nrow(clas.set[folds==k,])
+  }
+  CV_mean<-mean(CV)
+  plot(CV, type="l")
+  err[i] <- CV_mean
+  print(formula[[i]])
+  print(err[i])
+}
+err.naiveqda = min(err)
+cat("Il faut choisir la formule initiale, avec un taux d'erreur d'environ 0.36")
 
 
 
@@ -374,30 +442,56 @@ cat("L'erreur est encore plus grande et la sélection de coefficient par lasso n
 #Ici, nos données ont les classes c > 2, donc on a utilisé la méthode "Multinomial logistic regression"
 
 
-#lasso + selection de variable 
 #https://fr.wikipedia.org/wiki/R%C3%A9gression_logistique
 
 fit.logistic_multi  <- multinom(y ~ ., data=data.train)
 pred.logistic_multi <- predict(fit.logistic_multi, newdata=data.test)
 perf.logistic_multi <- table(data.test$y, pred.logistic_multi)
 perf.logistic_multi
-sum(diag(perf.logistic_multi)) / n_tst
-err.logistic_multi <- 1-sum(diag(perf.logistic_multi)) / n_tst 
+sum(diag(perf.logistic_multi)) / n_test
+err.logistic_multi <- 1-sum(diag(perf.logistic_multi)) / n_test 
 err.logistic_multi
 
-# Logistic regression AFTER lasso coefficient selection -------------------------
+# KCV for Multinomial logistic regression
 
-fit.logistic_multi  <- multinom(y ~ X3 + X5 + X6 + X16 + X26 + X40 + X44 + X47, data=data.train)
-pred.logistic_multi <- predict(fit.logistic_multi, newdata=data.test)
-perf.logistic_multi <- table(data.test$y, pred.logistic_multi)
-perf.logistic_multi
-sum(diag(perf.logistic_multi)) / n_tst
-err.logistic_multi_lasso <- 1-sum(diag(perf.logistic_multi)) / n_tst 
+clas.set$y <- factor(clas.set$y)
 
+
+K<-10
+err = rep(0,4)
+par(mfrow = c(2, 2))
+
+for (i in (1:4)){
+  CV <- rep(0,10)
+  folds=sample(1:K,n_clas,replace=TRUE)
+  for(k in (1:K)){
+    class<-multinom(formula[[i]],data=clas.set[folds!=k,])
+    pred<-predict(class,newdata=clas.set[folds==k,])
+    conf <- table(clas.set[folds==k,]$y, pred)
+    CV[k]<-1-sum(diag(conf))/nrow(clas.set[folds==k,])
+    #  class<-qda(y~.,data=clas.set[folds==k,])
+    #  pred<-predict(class,newdata=clas.set[folds==k,])
+    #  conf <- table(clas.set[folds==k,]$y, pred$class)
+    #  CV2<-CV2+1-sum(diag(conf))/nrow(clas.set[folds==k,])
+  }
+  CV_mean<-mean(CV)
+  plot(CV, type="l")
+  err[i] <- CV_mean
+  print(formula[[i]])
+  print(err[i])
+}
+for (i in (1:4)) {
+  print(formula[[i]])
+  print(err[i])
+}
+err.naiveqda = min(err)
+cat("Il faut encore une fois choisir la formule initiale, avec un taux d'erreur d'environ 0.42")
+
+par(mfrow = c(1, 1))
 
 # ROC CURVE -------------------------------------------------------
 
-install.packages("pROC")
+#install.packages("pROC")
 library(pROC)
 
 roc.lda<-roc(data.test$y,as.vector(pred.lda$posterior[,1]))
@@ -406,12 +500,12 @@ plot(roc.lda)
 roc.qda<-roc(data.test$y,as.vector(pred.qda$posterior[,1]))
 plot(roc.qda, col='red', add=TRUE)
 
+pred.naiveqda <- predict(fit.naiveqda, newdata=data.test[1:50], type="prob")
+
 roc.naive<-roc(data.test$y,pred.naiveqda[,1])
 plot(roc.naive, col='green', add=TRUE)
 
 # not feasible with logistic regression
-
-#model selection
 
 
 # Feature extraction  -----------------------------------------------------
@@ -439,4 +533,5 @@ Z<-X%*%U
 
 
 plot(Z[,1],Z[,2],pch=clas.set$y,col=clas.set$y,xlab='Z1',ylab='Z2')
+
 

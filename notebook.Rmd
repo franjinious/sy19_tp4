@@ -1,0 +1,59 @@
+---
+title: "TP4 - SY19"
+authors: "Pengyu JI, Antoine Kryus, Chenxi Liu"
+subtitle: "Rapport du TP4: Régression et classification - Sélection de modèles"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+## Jeu de donnée de classification
+
+### Récupération de la base de données
+
+```{r}
+clas.set <- read.csv("TPN1_a22_clas_app.txt", sep="")
+
+```
+
+### Exploration des données
+
+```{r}
+summary(clas.set)
+length(clas.set)
+NROW(clas.set)
+n_clas <- dim(clas.set)[1]
+barplot(table(clas.set$y))
+
+tmp <- max(table(clas.set$y)/n_clas)
+tmp #le taux de classes 2 ou 3
+1-tmp 
+```
+Nous voyons qu'il y a un déséquilibre entre la classe "1" et les classes "2" et "3" au niveau de la fréquence d'apparition. Dans les entraînements, cela n'est pas forcément gênant même s'il est possible de mettre un poids supérieur à la classe "1" pour éviter un apprentissage qui est plus précis sur les classes "2" et "3".
+
+### Préparation des données
+
+Afin de séparer les données d'apprentissage et de test, nous avons choisi de mélanger les données aléatoirement, et d'en prendre quantre cinquièmes pour l'apprentissage. Nous avons également testé avec deux tiers de données d'apprentissage, mais les erreurs était légèrement supérieures.
+
+```{r}
+n_clas <- dim(clas.set)[1]
+train_percentage <- 4/5
+n_train <- round(n_clas* train_percentage)
+n_test <- n_clas - n_train
+
+set.seed(19)
+id_train <- sample(1:n_clas, n_train)
+
+data.train <- clas.set[  id_train,]
+data.test <- clas.set[- id_train,]
+y.test <- clas.set[-id_train, c(51)]
+y.train <- clas.set[id_train, c(51)]
+```
+
+## Sélection de modèle pour 
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.

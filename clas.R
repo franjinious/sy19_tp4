@@ -84,9 +84,11 @@ y.train <- clas.set[id_train, c(51)]
 
 # Sélection de modèles ------------------------------------------------
 
-summary(lm(y~., data=data.train))
+
+summary(lm(y~., data=data.train)) #djusted R-squared:  0.0373  p-value: 0.1289 means we cant use lm for this
+
 formula <- c(y~.)
-summary(lm(y ~ X26+X44+X47+X40+X24+X19+X16+X5, data=data.train))
+summary(lm(y ~ X26+X44+X47+X40+X24+X19+X16+X5, data=data.train)) #Adjusted R-squared:  0.0815 means no linar relations
 cat("On peut déjà sélectionner cette formule avec ces coefficient car c'est le R² ajusté qui est le plus haut avec une RSS plus faible que le modèle avec tous les coefficients.")
 formula <- append(formula, y~X26+X44+X47+X40+X24+X19+X16+X5)
 
@@ -94,12 +96,14 @@ formula <- append(formula, y~X26+X44+X47+X40+X24+X19+X16+X5)
 #Subset selection
 #Vu qu'il existe trop de variables, nous pourrions pas utiliser la m??thode best subset selection
 
-#forward selection
+#forward selection 
 library(leaps)
 library(dplyr)
 reg.selection.forward <- regsubsets(y~., data = data.train, method = "forward", nbest = 1, nvmax = 100)
 summary_forward <- summary(reg.selection.forward)
 plot(reg.selection.forward, scale = "adjr2")#Regarder brièvement la plus grande adjusted R Square
+
+#0.1?
 
 rss<-data.frame(summary_forward$outmat, RSS=summary_forward$rss)
 rsquare_max_forward <- summary_forward$outmat[which.max(summary_forward$adjr2),]#La ligne avec la plus grande adjr2
@@ -115,7 +119,7 @@ n.subset.forward.train <- as.integer(train_percentage * n.subset.forward)
 n.subset.forward.sample <- sample(n.subset.forward, n.subset.forward.train)
 reg.subset.forward.train <- reg.subset.forward[n.subset.forward.sample,]
 reg.subset.forward.test <- reg.subset.forward[-n.subset.forward.sample,]
-reg.subset.forward.lm <- lm(formula = y~., data = reg.subset.forward.train)
+reg.subset.forward.lm <- lm(formula = y~., data = reg.subset.forward.train) # obj y not found
 reg.subset.forward.lm.predict <- predict(reg.subset.forward.lm, newdata = reg.subset.forward.test)
 reg.subset.forward.mse <- mean((reg.subset.forward.lm.predict - reg.subset.forward.test$y) ^ 2)#188.44
 reg.subset.forward.err <- rstandard(reg.subset.forward.lm)
@@ -139,7 +143,7 @@ n.subset.backward.train <- as.integer(train_percentage * n.subset.backward)
 n.subset.backward.sample <- sample(n.subset.backward, n.subset.backward.train)
 reg.subset.backward.train <- reg.subset.backward[n.subset.backward.sample,]
 reg.subset.backward.test <- reg.subset.backward[-n.subset.backward.sample,]
-reg.subset.backward.lm <- lm(formula = y~., data = reg.subset.backward.train)
+reg.subset.backward.lm <- lm(formula = y~., data = reg.subset.backward.train) #obj y not found
 reg.subset.backward.lm.predict <- predict(reg.subset.backward.lm, newdata = reg.subset.backward.test)
 reg.subset.backward.mse <- mean((reg.subset.backward.lm.predict - reg.subset.backward.test$y) ^ 2)#186.92
 reg.subset.backward.err <- rstandard(reg.subset.backward.lm)

@@ -1,4 +1,5 @@
 library(MASS)
+
 reg.set <- read.table('TPN1_a22_reg_app.txt', header = TRUE)
 
 #plot(reg.set[,1:10], reg.set$y)
@@ -33,6 +34,10 @@ plot(x = y.train, y = res_std)#Les r??sidus stadards parraissent pas mal
 abline(0, 0)
 pre.lm <- predict(reg.set.lm, newdata = data.test)
 mse.lm <- mean((pre.lm - y.test) ^ 2)#200.176
+
+print(mse.lm)
+
+
 #On refait la regression avec les variables significatives
 x.app.lm <- data.train[c(6, 11, 12, 15, 17,22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), ] 
 data.test.lm <- data.test[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), ]
@@ -40,7 +45,7 @@ reg.set.lm.revise <- lm(formula = y~. , data = x.app.lm)
 pre.lm.revise <- predict(reg.set.lm.revise, newdata = data.test.lm)
 mse.lm1 <- mean((pre.lm - y.test) ^ 2)#200.176
 
-
+print(mse.lm1)
 
 #k plus proches voisins
 #On utilise les variables significatives dans le modèle lineaire
@@ -58,6 +63,8 @@ x.test_k.scale <- scale(data.test[, c(-101)])
 kmin <- 10
 reg.knn1 <- knn.reg(train = x.app_k, test = x.test_k, y = y.app_k, k = kmin)
 mse.knn1 <- mean((reg.knn1$pred - y.test) ^ 2) #4167, trop grande
+print("mse.knn1")
+
 
 # Chenxin K variation & scale -----------------------------------------------------------------
 
@@ -114,6 +121,7 @@ rsquare_max_forward <- as.numeric(rsquare_max_forward)#Le masque pour s??lection
 reg.subset.forward <- reg.set[c(rsquare_max_forward==1)]
 
 
+
 n.subset.forward <- nrow(reg.subset.forward)
 set.seed(69)
 n.subset.forward.train <- as.integer(train.percentage * n.subset.forward)
@@ -123,6 +131,9 @@ reg.subset.forward.test <- reg.subset.forward[-n.subset.forward.sample,]
 reg.subset.forward.lm <- lm(formula = y~., data = reg.subset.forward.train)
 reg.subset.forward.lm.predict <- predict(reg.subset.forward.lm, newdata = reg.subset.forward.test)
 reg.subset.forward.mse <- mean((reg.subset.forward.lm.predict - reg.subset.forward.test$y) ^ 2)#188.44
+
+print(reg.subset.forward.mse)
+
 reg.subset.forward.err <- rstandard(reg.subset.forward.lm)
 plot(reg.subset.forward.train$y, reg.subset.forward.err)
 abline(0, 0)
@@ -148,6 +159,7 @@ reg.subset.backward.lm <- lm(formula = y~., data = reg.subset.backward.train)
 reg.subset.backward.lm.predict <- predict(reg.subset.backward.lm, newdata = reg.subset.backward.test)
 reg.subset.backward.mse <- mean((reg.subset.backward.lm.predict - reg.subset.backward.test$y) ^ 2)#186.92
 reg.subset.backward.err <- rstandard(reg.subset.backward.lm)
+print(reg.subset.backward.mse)
 plot(reg.subset.backward.train$y, reg.subset.backward.err)
 abline(0, 0)
 
@@ -221,13 +233,31 @@ plot(cv.out.ridge)
 fit.ridge <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.ridge$lambda.min, alpha = 0)
 ridge.predict <- predict(fit.ridge, s = cv.out.ridge$lambda.min, newx = data.test.regu)
 mse.ridge <- mean((ridge.predict - y.test.regu) ^ 2)#200.44
-
+print(mse.ridge)
 #lasso
 cv.out.lasso <- cv.glmnet(data.train.regu, y.train.regu, alpha = 1)
 plot(cv.out.lasso)
 fit.lasso <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.lasso$lambda.min, alpha = 1)
 lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = data.test.regu)
 mse.lasso <- mean((lasso.predict - y.test.regu) ^ 2)#178
+print(mse.lasso)
+
+
+
+# Summmary ----------------------------------------------------------------
+
+print(mse.lm)
+print(mse.lm1)
+print(mse.knn2)
+print(reg.subset.backward.mse)
+print(reg.subset.forward.mse)
+print(mse.ridge)
+print(mse.lasso)
+
+
+# End Summary -------------------------------------------------------------
+
+
 
 
 regresseur <- function(dataset) {

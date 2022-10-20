@@ -27,7 +27,7 @@ validationplot(pcr_model, val.type="MSEP")#D'apr??s le graphe on constate qu'il 
 
 #modele lineare#
 reg.set.lm <- lm(formula = y ~., data = data.train)
-summary(reg.lm)#On a d??j?? une p-value qui est assez petite en une R-Square assez grande
+summary(reg.set.lm)#On a d??j?? une p-value qui est assez petite en une R-Square assez grande
 res_std <- rstandard(reg.set.lm)
 plot(x = y.train, y = res_std)#Les r??sidus stadards parraissent pas mal
 abline(0, 0)
@@ -45,19 +45,19 @@ mse.lm1 <- mean((pre.lm - y.test) ^ 2)#200.176
 #k plus proches voisins
 #On utilise les variables significatives dans le modèle lineaire
 library(FNN)
-x.app_k <- x.app_reg[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), c(-101)] 
-y.app_k <- x.app_reg[, c(101)]
-x.test_k <- x.test_reg[, c(-101)]
+x.app_k <- data.train[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), c(-101)] 
+y.app_k <- data.train[, c(101)]
+x.test_k <- data.test[, c(-101)]
 
 # Chenxin:add scale -------------------------------------------------------
 
-x.app_k.scale <- scale(x.app_reg[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), c(-101)] )
-x.test_k.scale <- scale(x.test_reg[, c(-101)])
+x.app_k.scale <- scale(data.train[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), c(-101)] )
+x.test_k.scale <- scale(data.test[, c(-101)])
 
 
 kmin <- 10
 reg.knn1 <- knn.reg(train = x.app_k, test = x.test_k, y = y.app_k, k = kmin)
-mse.knn1 <- mean((reg.knn1$pred - y.test_reg) ^ 2) #4167, trop grande
+mse.knn1 <- mean((reg.knn1$pred - y.test) ^ 2) #4167, trop grande
 
 # Chenxin K variation & scale -----------------------------------------------------------------
 
@@ -65,13 +65,13 @@ knn_k_max <- 37
 
 tmp <- sapply(1:knn_k_max, function(local_k){
   reg.knn.noscale <- knn.reg(train = x.app_k, test = x.test_k, y = y.app_k, k = local_k)
-  res <- mean((reg.knn.noscale$pred - y.test_reg) ^ 2)
+  res <- mean((reg.knn.noscale$pred - y.test) ^ 2)
   return(res)
 })
 
 tmp.scale <- sapply(1:knn_k_max, function(local_k){
   reg.knn.scale <- knn.reg(train = x.app_k.scale, test = x.test_k.scale, y = y.app_k, k = local_k)
-  res.scale <- mean((reg.knn.scale$pred - y.test_reg) ^ 2)
+  res.scale <- mean((reg.knn.scale$pred - y.test) ^ 2)
   return(res.scale)
 })
 
@@ -206,45 +206,57 @@ CV.min = min(CV)#181
 reg.knn2 <- knn.reg(train = reg.subset.backward.train[, c(-66)], test = reg.subset.backward.test[, c(-66)], y = reg.subset.backward.train[,c(66)], k = kmin)
 mse.knn2 <- mean((reg.knn2$pred - y.test) ^ 2)#2226
 
-#Ridge regression
+#Préparation de données pour Ridge et Lasso
 library(glmnet)
 x<-model.matrix(y~.,reg.set)
 y<-reg.set$y
-data.train <- x[id_train,]
-y.train <- y[id_train]
-data.test <- x[-id_train,]
-y.test <- y[-id_train]
+data.train.regu <- x[id_train,]
+y.train.regu <- y[id_train]
+data.test.regu <- x[-id_train,]
+y.test.regu <- y[-id_train]
 
-cv.out.ridge <- cv.glmnet(data.train, y.train, alpha = 0)
+#Ridge regression
+cv.out.ridge <- cv.glmnet(data.train.regu, y.train.regu, alpha = 0)
 plot(cv.out.ridge)
-fit.ridge <- glmnet(data.train, y.train, lambda = cv.out.ridge$lambda.min, alpha = 0)
-ridge.predict <- predict(fit.ridge, s = cv.out.ridge$lambda.min, newx = data.test)
-mse.ridge <- mean((ridge.predict - y.test) ^ 2)#200.44
+fit.ridge <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.ridge$lambda.min, alpha = 0)
+ridge.predict <- predict(fit.ridge, s = cv.out.ridge$lambda.min, newx = data.test.regu)
+mse.ridge <- mean((ridge.predict - y.test.regu) ^ 2)#200.44
 
 #lasso
-cv.out.lasso <- cv.glmnet(data.train, y.train, alpha = 1)
+cv.out.lasso <- cv.glmnet(data.train.regu, y.train.regu, alpha = 1)
 plot(cv.out.lasso)
-fit.lasso <- glmnet(data.train, y.train, lambda = cv.out.lasso$lambda.min, alpha = 1)
-lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = data.test)
-mse.lasso <- mean((lasso.predict - y.test) ^ 2)#178
-
-classifieur <- function(dataset) {
-  
-  # Chargement de l??environnement
-  load("env.Rdata")
-  # Mon algorithme qui renvoie les pr??dictions sur le jeu de donn??es
-  # ??dataset?? fourni en argument.
-  # ...
-  return(predictions)
-}
+fit.lasso <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.lasso$lambda.min, alpha = 1)
+lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = data.test.regu)
+mse.lasso <- mean((lasso.predict - y.test.regu) ^ 2)#178
 
 
 regresseur <- function(dataset) {
-  # Chargement de l??environnement
-  load("env.Rdata")
-  # Mon algorithme qui renvoie les pr??dictions sur le jeu de donn??es
-  # ??dataset?? fourni en argument.
-  # ...
+  #load("env.Rdata")
+  library(glmnet)
+  train.percentage <- 2/3
+  n_reg <- nrow(reg.set)
+  n_train <- as.integer(n_reg * train.percentage)
+  n_test <- n_reg - n_train
+  set.seed(69)
+  id_train <- sample(n_reg, n_train)
+  
+  
+  x<-model.matrix(y~.,reg.set)
+  y<-reg.set$y
+  data.train.regu <- x[id_train,]
+  y.train.regu <- y[id_train]
+  data.test.regu <- x[-id_train,]
+  y.test.regu <- y[-id_train]
+  
+  
+  cv.out.lasso <- cv.glmnet(data.train.regu, y.train.regu, alpha = 1)
+  plot(cv.out.lasso)
+  fit.lasso <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.lasso$lambda.min, alpha = 1)
+  predictions <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = data.test.regu)
+  mse.lasso <- mean((predictions - y.test.regu) ^ 2)#178
+  print("La MSE est:")
+  print(mse.lasso)
   return(predictions)
 }
+pred <- regresseur(reg.set)
 

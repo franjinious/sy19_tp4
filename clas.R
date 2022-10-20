@@ -17,7 +17,7 @@ reloadpck = function(reload = TRUE){
   }
 }
 
-pckToLoad = c('MASS'       , # QDA, LDQ
+pcklToLoad = c('MASS'       , # QDA, LDQ
               'naivebayes' , # for naive QDA (a.k.a naive Bayes)
               'nnet'       , # Multinomial logistic regression
               'FNN'        , # Fast KNN algo
@@ -69,8 +69,8 @@ tmp #le taux de classes 2 ou 3
 
 n_clas <- dim(clas.set)[1]
 train_percentage <- 4/5
-n_app <- round(n_clas* train_percentage)
-n_tst <- n_clas - n_app
+n_train <- round(n_clas* train_percentage)
+n_test <- n_clas - n_app
 
 set.seed(19)
 id_train <- sample(1:n_clas, n_app)
@@ -198,7 +198,7 @@ for (i in (1:10)){
     pred.cross <- predict(reg.cross, newdata=clas.set[fold == k,])
     CV[i]<-CV[i]+ sum((clas.set$y[fold==k]-pred.cross)^2)
   }
-  CV[i]<-CV[i] / n_reg
+  CV[i]<-CV[i] / n_clas
 }
 CV.min = min(CV)# 0.52
 

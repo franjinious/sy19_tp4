@@ -16,13 +16,6 @@ output:
 ```{r setup, include=FALSE}
 # Load r packages (Install if missing)
 
-if(!require(here)) install.packages("here")
-if(require(here)) {
-  setwd(here::here())
-}else{
-  warning('Make sure the package "here" is installed')
-}
-
 if(!require("tidyverse")) {
   install.packages("tidyverse")
   library("tidyverse")

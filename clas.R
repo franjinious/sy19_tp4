@@ -68,7 +68,7 @@ tmp #le taux de classes 2 ou 3
 # Training & test set preparation -------------------------------------------------
 
 n_clas <- dim(clas.set)[1]
-train_percentage <- 2/3
+train_percentage <- 4/5
 n_train <- round(n_clas* train_percentage)
 n_test <- n_clas - n_train
 
@@ -97,7 +97,7 @@ formula <- append(formula, y~X26+X44+X47+X40+X24+X19+X16+X5)
 #forward selection
 library(leaps)
 library(dplyr)
-reg.selection.forward <- regsubsets(y~., data = data.train, method = "forward", nbest = 1, nvmax = 100)
+reg.selection.forward <- regsubsets(y~., data = data.train, method = "forward", nbest = 1, nvmax = 50)
 summary_forward <- summary(reg.selection.forward)
 plot(reg.selection.forward, scale = "adjr2")#Regarder brièvement la plus grande adjusted R Square
 
@@ -105,7 +105,8 @@ rss<-data.frame(summary_forward$outmat, RSS=summary_forward$rss)
 rsquare_max_forward <- summary_forward$outmat[which.max(summary_forward$adjr2),]#La ligne avec la plus grande adjr2
 rsquare_max_forward[rsquare_max_forward == '*'] <- as.numeric(1)
 rsquare_max_forward[rsquare_max_forward == ' '] <- as.numeric(0)
-rsquare_max_forward <- as.numeric(rsquare_max_forward)#Le masque pour s??lectionner les variables
+rsquare_max_forward <- as.numeric(rsquare_max_forward)#Le masque pour sélectionner les variables
+rsquare_max_forward[51] <- 1 # garder y
 reg.subset.forward <- clas.set[c(rsquare_max_forward==1)]
 
 
@@ -123,7 +124,7 @@ plot(reg.subset.forward.train$y, reg.subset.forward.err)
 abline(0, 0)
 
 #backward selection
-reg.selection.backward <- regsubsets(y~., data = data.train, method = "backward", nbest = 1, nvmax = 100)
+reg.selection.backward <- regsubsets(y~., data = data.train, method = "backward", nbest = 1, nvmax = 50)
 summary_backward <- summary(reg.selection.backward)
 plot(reg.selection.backward, scale = "adjr2")
 #rss<-data.frame(summary_forward$outmat, RSS=summary_forward$rss)
@@ -131,6 +132,7 @@ rsquare_max_backward <- summary_backward$outmat[which.max(summary_backward$adjr2
 rsquare_max_backward[rsquare_max_backward == '*'] <- as.numeric(1)
 rsquare_max_backward[rsquare_max_backward == ' '] <- as.numeric(0)
 rsquare_max_backward <- as.numeric(rsquare_max_backward)
+rsquare_max_backward[51] <- 1 # garder y
 reg.subset.backward <- clas.set[c(rsquare_max_backward==1)]
 
 n.subset.backward <- nrow(reg.subset.backward)
@@ -520,17 +522,18 @@ lambda<-pca$sdev^2
 plot(cumsum(lambda)/sum(lambda),type="l",xlab="q",ylab="proportion of explained variance")
 #variance augmenter tres lentement en funciton de q
 
-pairs(Z[,1:5],col=clas.set[,51],pch=clas.set[,51])
+pairs(Z[,1:3], col=TPN1_a22_clas_app[,51], pch=TPN1_a22_clas_app[,51])
 pairs(Z[,6:10],col=clas.set[,51],pch=clas.set[,51])
 str(clas.set[,51])
+pairs(Z[,1:3],col=clas.set[,1],pch=clas.set[,1])
+
 
 #FDA (supervised)
 
-lda.fda<-lda(y~.,data = clas.set)
+lda.fda<-lda(y~.,data = TPN1_a22_clas_app)
 U<-lda.fda$scaling
-X<-as.matrix(clas.set[,1:50])
+X<-as.matrix(TPN1_a22_clas_app[,1:50])
 Z<-X%*%U
-
 
 plot(Z[,1],Z[,2],pch=clas.set$y,col=clas.set$y,xlab='Z1',ylab='Z2')
 

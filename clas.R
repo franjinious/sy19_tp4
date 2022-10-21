@@ -497,7 +497,7 @@ par(mfrow = c(1, 1))
 library(pROC)
 
 roc.lda<-roc(data.test$y,as.vector(pred.lda$posterior[,1]))
-plot(roc.lda)
+plot(roc.lda, col="blue")
 
 roc.qda<-roc(data.test$y,as.vector(pred.qda$posterior[,1]))
 plot(roc.qda, col='red', add=TRUE)
@@ -506,6 +506,10 @@ pred.naiveqda <- predict(fit.naiveqda, newdata=data.test[1:50], type="prob")
 
 roc.naive<-roc(data.test$y,pred.naiveqda[,1])
 plot(roc.naive, col='green', add=TRUE)
+legend( x = "bottomright",
+        legend = c("LDA","QDA","Naive Bayes"),
+        col = c("blue","red","green"), lwd = 1, lty = c(1,1),
+        pch = c(NA,NA) )
 
 # not feasible with logistic regression
 

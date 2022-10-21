@@ -85,7 +85,7 @@ barplot(table(TPN1_a22_clas_app$y))
 tmp <- max(table(TPN1_a22_clas_app$y)/nrow(TPN1_a22_clas_app))
 1-tmp 
 ```
-First we explore the data a little, there is barplot can be seen: Y consists of three classes, the number of class1 is significantly smaller than the number of class2, 3. So if we do not do machine learning and choose the class with the largest proportion each time, our error rate will be 0.58, which will be the highest error rate we can accept
+First we explore the data a little with a barplot : Y consists of three classes, the number of class1 is significantly smaller than the number of class2, 3. So if we do not do machine learning and choose the class with the largest proportion each time, our error rate will be 0.58, which will be the highest error rate we can accept.
 
 ## Nonparametric method kNN
 The first method we choose is the non-parametric one, the knn method. Firstly we apply KNN with an arbitrary k = 10 to have a look at general result.
@@ -389,7 +389,7 @@ clas_lda.cv_repeat10[,1:4] %>% summary()
 ## Naive Bayes
 
 ```{r message=FALSE, warning=FALSE,echo=FALSE}
-source("scripts/f_clas_naive_bayes.r")
+source("scripts/f_clas_naive_bayes.R")
 f_clas_naive_bayes(train = clas.data.train, test = clas.data.test)
 
 ```

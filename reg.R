@@ -104,7 +104,7 @@ library(leaps)
 library(dplyr)
 reg.selection.forward <- regsubsets(y~., data = data.train, method = "forward", nbest = 1, nvmax = 100)
 summary_forward <- summary(reg.selection.forward)
-plot(reg.selection.forward, scale = "adjr2")#Regarder bri??vement la plus grande adjusted R Square
+plot(reg.selection.forward, scale = "bic")#Regarder bri??vement la plus grande adjusted R Square
 
 rss<-data.frame(summary_forward$outmat, RSS=summary_forward$rss)
 rsquare_max_forward <- summary_forward$outmat[which.max(summary_forward$adjr2),]#La ligne avec la plus grande adjr2

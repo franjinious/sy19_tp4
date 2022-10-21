@@ -34,11 +34,14 @@ abline(0, 0)
 pre.lm <- predict(reg.set.lm, newdata = data.test)
 mse.lm <- mean((pre.lm - y.test) ^ 2)#200.176
 #On refait la regression avec les variables significatives
-x.app.lm <- data.train[c(6, 11, 12, 15, 17,22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), ] 
-data.test.lm <- data.test[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), ]
-reg.set.lm.revise <- lm(formula = y~. , data = x.app.lm)
-pre.lm.revise <- predict(reg.set.lm.revise, newdata = data.test.lm)
-mse.lm1 <- mean((pre.lm - y.test) ^ 2)#200.176
+#x.app.lm <- data.train[c(6, 11, 12, 15, 17,22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), ] 
+#data.test.lm <- data.test[c(6, 11, 12, 15, 17, 22, 23, 25, 27, 32, 33, 35, 37, 39, 46, 47, 48, 49, 52, 54, 56, 59, 60, 63, 68, 70, 72, 74, 79, 83, 84, 87, 88, 89, 90, 91, 96), ]
+#reg.set.lm.revise <- lm(formula = y~. , data = x.app.lm)
+reg.set.lm.revise <- lm(formula = y~X6+X11+X12+X15+X17+X22+X23+X25+X27+X32+X33+X35+X37+X39+X46+X47+X48+X49+X52+X54+X56+X59+X60+X63+X68+X70+X72+X74+X79+X83+X84+X87+X88+X89+X90+X91+X96
+                        , data = data.train)
+#pre.lm.revise <- predict(reg.set.lm.revise, newdata = data.test.lm)
+pre.lm.revise <- predict(reg.set.lm.revise, newdata = data.test)
+mse.lm1 <- mean((pre.lm.revise - y.test) ^ 2)#200.176
 
 
 

@@ -403,7 +403,7 @@ perf.naiveqda <- table(data.test$y, pred.naiveqda)
 perf.naiveqda
 sum(diag(perf.naiveqda)) / n_test
 err.naiveqda <- 1-sum(diag(perf.naiveqda)) / n_test
-cat("taux d'erreur avec LDA:")
+cat("taux d'erreur avec Naive Bayes:")
 err.naiveqda
 
 # KCV for naive Bayes
@@ -540,5 +540,44 @@ X<-as.matrix(TPN1_a22_clas_app[,1:50])
 Z<-X%*%U
 
 plot(Z[,1],Z[,2],pch=clas.set$y,col=clas.set$y,xlab='Z1',ylab='Z2')
+
+
+# FUNCTION ------------------------------------------
+
+clas.set <- read.csv("TPN1_a22_clas_app.txt", sep="")
+
+n_clas <- dim(clas.set)[1]
+train_percentage <- 4/5
+n_train <- round(n_clas* train_percentage)
+n_test <- n_clas - n_train
+
+set.seed(19)
+id_train <- sample(1:n_clas, n_train)
+data.train <- clas.set[  id_train,]
+data.test <- clas.set[- id_train,]
+y.test <- clas.set[-id_train, c(51)]
+y.train <- clas.set[id_train, c(51)]
+
+
+data.train$y <- factor(data.train$y)
+
+model.cls  <- naive_bayes(y ~ ., data=data.train)
+
+
+prediction_cls <- function(dataset) {
+  #load("env.Rdata")
+  library(naivebayes)
+  
+  predictions <- predict(model.cls, newdata=dataset[1:50])
+  perf.naiveqda <- table(dataset$y, predictions)
+  perf.naiveqda
+  err.naiveqda <- 1-sum(diag(perf.naiveqda)) / n_test
+  print("taux d'erreur avec Naive Bayes:")
+  print(err.naiveqda)
+  
+  return(predictions)
+}
+pred <- prediction_cls(data.test)
+
 
 

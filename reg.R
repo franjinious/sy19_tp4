@@ -233,33 +233,50 @@ lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = data.tes
 mse.lasso <- mean((lasso.predict - y.test.regu) ^ 2)#178
 
 
-regresseur <- function(dataset) {
+# FUNCTION ------------------------------------------
+
+library(MASS)
+reg.set <- read.table('data/TPN1_a22_reg_app.txt', header = TRUE)
+
+train.percentage <- 2/3
+n_reg <- nrow(reg.set)
+n_train <- as.integer(n_reg * train.percentage)
+n_test <- n_reg - n_train
+set.seed(69)
+id_train <- sample(n_reg, n_train)
+
+data.train <- reg.set[id_train,]
+data.test <- reg.set[-id_train,]
+y.test <- reg.set[-id_train, c(101)]
+y.train <- reg.set[id_train, c(101)]
+
+
+
+x<-model.matrix(y~.,reg.set)
+y<-reg.set$y
+data.train.regu <- x[id_train,]
+y.train.regu <- y[id_train]
+data.test.regu <- x[-id_train,]
+y.test.regu <- y[-id_train]
+
+
+cv.out.lasso <- cv.glmnet(data.train.regu, y.train.regu, alpha = 1)
+plot(cv.out.lasso)
+model.reg <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.lasso$lambda.min, alpha = 1)
+
+prediction_reg <- function(dataset) {
   #load("env.Rdata")
   library(glmnet)
-  train.percentage <- 2/3
-  n_reg <- nrow(reg.set)
-  n_train <- as.integer(n_reg * train.percentage)
-  n_test <- n_reg - n_train
-  set.seed(69)
-  id_train <- sample(n_reg, n_train)
   
+  dataset.x <- dataset[-101]
   
-  x<-model.matrix(y~.,reg.set)
-  y<-reg.set$y
-  data.train.regu <- x[id_train,]
-  y.train.regu <- y[id_train]
-  data.test.regu <- x[-id_train,]
-  y.test.regu <- y[-id_train]
+  dataset.matrix = cbind("(Intercept)" = rep(1,167),as.matrix(dataset.x))
   
-  
-  cv.out.lasso <- cv.glmnet(data.train.regu, y.train.regu, alpha = 1)
-  plot(cv.out.lasso)
-  fit.lasso <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.lasso$lambda.min, alpha = 1)
-  predictions <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = data.test.regu)
-  mse.lasso <- mean((predictions - y.test.regu) ^ 2)#178
+  predictions <- predict(model.reg, s = 0.3176887, newx = dataset.matrix)
+  mse.lasso <- mean((predictions - dataset$y) ^ 2)#178
   print("La MSE est:")
   print(mse.lasso)
   return(predictions)
 }
-pred <- regresseur(reg.set)
+pred <- prediction_reg(data.test)
 

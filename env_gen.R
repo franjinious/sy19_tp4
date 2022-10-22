@@ -10,8 +10,8 @@ train_percentage <- 4/5
 n_train <- round(n_clas* train_percentage)
 n_test <- n_clas - n_train
 
-set.seed(19)
-id_train <- sample(1:n_clas, n_train)
+set.seed(69)
+id_train <- sample(n_clas, n_train)
 data.test.cls <- clas.set[- id_train,] # for us to have a test set
 
 
@@ -54,8 +54,6 @@ library(Matrix)
 x<-model.matrix(y~.,reg.set)
 y<-reg.set$y
 
-
-data.test.reg <- data.test
 
 cv.out.lasso <- cv.glmnet(x, y, alpha = 1)
 plot(cv.out.lasso)

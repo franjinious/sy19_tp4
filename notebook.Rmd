@@ -1,6 +1,6 @@
 ---
 title: "TP4 - SY19"
-authors: "Pengyu JI, Antoine Kryus, Chenxi Liu"
+author: "Pengyu JI, Antoine Kryus, Chenxi Liu"
 subtitle: "Rapport du TP4: Régression et classification - Sélection de modèles"
 output:
   pdf_document:
@@ -14,7 +14,7 @@ output:
 
 # Regression data set
 
-## data import, exploration and partitioning
+## Data import, exploration and partitioning
 
 
 ```{r, message=FALSE, warning=FALSE, include=FALSE}
@@ -37,15 +37,16 @@ The range of the variables is between 0 and 10.
 train.percentage <- 2/3 #train partitioning
 n_reg <- nrow(reg.set)
 n_train <- as.integer(n_reg * train.percentage)
-n_test <- n_reg - n_train
 set.seed(69)
 id_train <- sample(n_reg, n_train)
 data.train <- reg.set[id_train,]
 data.test <- reg.set[-id_train,]
+```
+```{r include=FALSE}
+n_test <- n_reg - n_train
 y.test <- reg.set[-id_train, c(101)]
 y.train <- reg.set[id_train, c(101)]
 ```
-
 ## Model selection
 
 ### PCA
@@ -60,10 +61,11 @@ Looking at the graph, we can conclude that all the variables are needed to have 
 
 ### Linear model
 
-```{r}
+```{r include=FALSE}
 reg.set.lm <- lm(formula = y ~., data = data.train)
 ```
 ```{r eval=FALSE}
+reg.set.lm <- lm(formula = y ~., data = data.train)
 summary(reg.set.lm) # We have  small p-value and a relatively big R-Square
 ```
 From the summary, the general linear model has already a very little p-value and an optimal R²: 0.9626.
@@ -75,19 +77,14 @@ mse.lm <- mean((pre.lm - y.test) ^ 2)
 We got a mean squared error (MSE) of 200.176.
 Also, plotting the standard residuals we see that there is no apparent correlation.
 
-We did the regression again with the significant variables:
-```{r}
+```{r include=FALSE}
 reg.set.lm.revise <- lm(formula = y~X6+X11+X12+X15+X17+X22+X23+X25+X27+X32+X33+X35+X37+X39+X46+X47+X48+X49+X52+X54+X56+X59+X60+X63+X68+X70+X72+X74+X79+X83+X84+X87+X88+X89+X90+X91+X96, data = data.train)
 pre.lm.revise <- predict(reg.set.lm.revise, newdata = data.test)
-mse.lm1 <- mean((pre.lm.revise - y.test) ^ 2)
+mse.lm.signif <- mean((pre.lm.revise - y.test) ^ 2)
 ```
-We got a R² of 0.9429 and a MSE of 246.1544, which is a bit worse.
+We did the regression again with the significant variables we got a R² of 0.9429 and a MSE of 246.1544, which is a bit worse than the model with all coefficient. Maybe some of them are not significant, but this proves that they make the model better.
 
-
-
-## Subset selection
-
-## KNN using the significant variables
+## KNN method
 In this part, we try the KNN method with the full model. We use the data **with and without scaling**.
 
 ```{r include=FALSE}
@@ -101,23 +98,19 @@ x.test_k.scale <- scale(data.test[, c(-101)])
 
 ```{r out.width="50%"}
 knn_k_max <- 37
-
 tmp <- sapply(1:knn_k_max, function(local_k){
   reg.knn.noscale <- knn.reg(train = x.app_k, test = x.test_k, y = y.app_k, k = local_k)
   res <- mean((reg.knn.noscale$pred - y.test) ^ 2)
   return(res)
 })
-
 tmp.scale <- sapply(1:knn_k_max, function(local_k){
   reg.knn.scale <- knn.reg(train = x.app_k.scale, test = x.test_k.scale, y = y.app_k, k = local_k)
   res.scale <- mean((reg.knn.scale$pred - y.test) ^ 2)
   return(res.scale)
 })
-
 knn_MSE_noscale <- tmp
 knn_MSE_scale <- tmp.scale # global error
 plot(1:knn_k_max, knn_MSE_noscale, type='b', col='blue', ylim=range(knn_MSE_scale), xlab='k', ylab='MSE', lty = 1, pch = 1)
-
 lines(1:knn_k_max, knn_MSE_scale, type='b', col='red', lty = 1, pch = 1)
 ```
 
@@ -129,33 +122,30 @@ data.frame("which.min(knn_MSE_scale)" = which.min(knn_MSE_scale),
            "min(knn_MSE_noscale)" = min(knn_MSE_noscale))
 ```
 
-The minimum MSE is 3707.
+The minimum MSE is 2461, surprisingly without scaling, maybe because the data is quiet homogeneous (between 0 and 10) and that the scaling could possibly lower the quality of the data for some reasons.
 
 ## Subset selection
-Due to the fact that there is too many variables, we can't use the best subset selection.
 
 ### Forward selection
 
-To do this, we use regsubsets to find the significant variables with which we can reach a best adjr2.
+Due to the fact that there is too many variables, we can't use the best subset selection.
+We directly began with the forward stepwise method. To do this, we use regsubsets to find the significant variables with which we can reach the best adjusted R².
 ```{r}
 reg.selection.forward <- regsubsets(y~., data = data.train, method = "forward", nbest = 1, nvmax = 100)
 summary_forward <- summary(reg.selection.forward)
 ```
-From summary_forward, we can get a list of potential models. To choose which is best suited, we compare the adjusted determination coefficient of each model. This value gives us the possibility to measure the quality of the linear regression.
-
+From `summary_forward`, we can get a list of potential models. To choose which is best suited, we compare the adjusted determination coefficient of each model. This value gives us the possibility to measure the quality of the linear regression.
 ```{r}
 rss<-data.frame(summary_forward$outmat, RSS=summary_forward$rss)
-rsquare_max_forward <- summary_forward$outmat[which.max(summary_forward$adjr2),]
-#La ligne avec la plus grande adjr2
-rsquare_max_forward[rsquare_max_forward == '*'] <- as.numeric(1)
-rsquare_max_forward[rsquare_max_forward == ' '] <- as.numeric(0)
-rsquare_max_forward <- as.numeric(rsquare_max_forward)
-#Le masque pour sélectionner les variables
-reg.subset.forward <- reg.set[c(rsquare_max_forward==1)]
+r2_max_forward<-summary_forward$outmat[which.max(summary_forward$adjr2),] # line with biggest adj R²
+r2_max_forward[r2_max_forward == '*'] <- as.numeric(1)
+r2_max_forward[r2_max_forward == ' '] <- as.numeric(0)
+r2_max_forward <- as.numeric(r2_max_forward)
+reg.subset.forward <- reg.set[c(r2_max_forward==1)] # mask to select variables
 ```
-rsquare_max_forward is therefore a vector containing integers between 0 and 1 (1 for the columns to keep in the model and 0 for the columns to discard). We filter the data with it.
+`r2_max_forward` is therefore a vector containing integers between 0 and 1 (1 for the columns to keep in the model and 0 for the columns to discard). We filter the data with it and partition it as we did for the initial data set, into `reg.subset.forward.train` and `reg.subset.forward.test`.
 
-```{r}
+```{r include=FALSE}
 n.subset.forward <- nrow(reg.subset.forward)
 set.seed(69)
 n.subset.forward.train <- as.integer(train.percentage * n.subset.forward)
@@ -164,13 +154,12 @@ reg.subset.forward.train <- reg.subset.forward[n.subset.forward.sample,]
 reg.subset.forward.test <- reg.subset.forward[-n.subset.forward.sample,]
 
 ```
-
 ```{r}
 reg.subset.forward.lm <- lm(formula = y~., data = reg.subset.forward.train)
 reg.subset.forward.lm.predict <- predict(reg.subset.forward.lm, newdata = reg.subset.forward.test)
-reg.subset.forward.mse <- mean((reg.subset.forward.lm.predict - reg.subset.forward.test$y) ^ 2)#188.44
+mse.forward <- mean((reg.subset.forward.lm.predict - reg.subset.forward.test$y) ^ 2)#188.44
 ```
-The MSE is 188.44.
+The MSE is therefore of 188.44.
 
 ### Backward selection
 We use the same method previously mentioned to find the variables, with the `backward` attribute of method in the `regsubset` function.
@@ -194,7 +183,7 @@ reg.subset.backward.train <- reg.subset.backward[n.subset.backward.sample,]
 reg.subset.backward.test <- reg.subset.backward[-n.subset.backward.sample,]
 reg.subset.backward.lm <- lm(formula = y~., data = reg.subset.backward.train)
 reg.subset.backward.lm.predict <- predict(reg.subset.backward.lm, newdata = reg.subset.backward.test)
-reg.subset.backward.mse <- mean((reg.subset.backward.lm.predict - reg.subset.backward.test$y) ^ 2)#186.92
+mse.backward <- mean((reg.subset.backward.lm.predict - reg.subset.backward.test$y) ^ 2)#186.92
 ```
 The MSE found is of 186.92 which is best. To test the goodness of the method, we will use the K-Folds cross validation on it.
 
@@ -251,7 +240,7 @@ for (i in (1:10)){
   }
   CV[i]<-CV[i] / n_reg
 }
-CV.min = min(CV) #181
+mse.backward.CV.min = min(CV) #181
 
 ```
 We obtain the lowest value of the MSE for the model we had chosen (a mean of 181).
@@ -277,25 +266,26 @@ mse.ridge <- mean((ridge.predict - y.test.regu) ^ 2)#200.44
 With this method, we obtain an MSE of 200.44.
 
 ## Lasso regression
-```{r out.width="50%"}
+```{r include=FALSE}
 cv.out.lasso <- cv.glmnet(data.train.regu, y.train.regu, alpha = 1)
 #plot(cv.out.lasso)
 fit.lasso <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.lasso$lambda.min, alpha = 1)
 lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = data.test.regu)
 mse.lasso <- mean((lasso.predict - y.test.regu) ^ 2)#178
 ```
+We did the same to get the Lasso method (replacing `alpha=1`) that allow us to quiet some variable that could possibly be irrelevant to our model.
 With this method, we obtain an MSE of 178.13.
 
 # Conclusion
-```{r include=FALSE}
+```{r message=FALSE, warning=FALSE,echo=FALSE}
 mse.knn.scale <- min(knn_MSE_scale)
 mse.knn.noscale <- min(knn_MSE_noscale)
 ```
 
-```{r}
-cbind(mse.lm, mse.lm1, mse.knn.scale, mse.knn.noscale, reg.subset.forward.mse, reg.subset.backward.mse, CV.min, mse.ridge, mse.lasso)
+```{r echo=FALSE}
+print(cbind(mse.lm, mse.lm.signif, mse.knn.scale, mse.knn.noscale, mse.forward, mse.backward, mse.backward.CV.min, mse.ridge, mse.lasso))
 ```
-
+We then choose the lasso regression method to predict the future data due to the lowest MSE found.
 
 # Classification data set
 
@@ -349,8 +339,6 @@ source("scripts/clas-general-import_data.R")
 
 ```
 
-# Classification
-
 ## Preparation : Partitioning raw data to train & test
 
 ```{r echo=FALSE}
@@ -375,7 +363,7 @@ tmp <- max(table(TPN1_a22_clas_app$y)/nrow(TPN1_a22_clas_app))
 1-tmp 
 ```
 
-We explore the data a with barplot can be seen: Y consists of three classes, the number of class1 is significantly smaller than the number of class2, 3. So if we do not do machine learning and choose the class with the largest proportion each time, our error rate will be 0.58, which will be the highest error rate we can accept
+Y consists of three classes, the number of class1 is significantly smaller than the number of class 2 and class 3. So if we do not do machine learning and choose the class with the largest proportion each time, our error rate will be 0.58, which will be the highest error rate we can accept
 
 ## Nonparametric method: kNN
 
@@ -472,90 +460,8 @@ clas.test.errors[which.min(clas.test.errors$Err.tot),]
 
 Observing the plot, we see that class1 has an error rate of 1 when the value of k exceeds 10, most likely because class1 is a smaller class and is therefore divided into other classes when the value of k increases. But at k = 43 we observed a minimum error rate of 0.35, which is unlikily and next we applied cross comparisons to confirm the results. 
 
-### k_f-fold validation with k=5 In the k-fold validation, firtly we choose k = 5
 
-```{r KNN CV, echo=FALSE, message=FALSE, warning=FALSE, out.width="50%"}
-
-#import function
-source("scripts/f_clas_knn.R")
-source("scripts/f_clas_cv.R")
-
-
-set.seed(69)
-{# repeat CV and observe !
-  clas.cv.k_folds <- 5
-  tmp.cv.test.fold_id <- createFolds(y = TPN1_a22_clas_app$y, 
-                                     k = clas.cv.k_folds,
-                                     list = FALSE)
-  
-  # init a matrix (data.frame) to store the result
-  tmp.k_range <- 1:100
-  tmp.grid <- expand.grid(param.k = tmp.k_range, 
-                          test.fold_id = 1:clas.cv.k_folds)
-  
-  tmp.errors <- matrix(data = NA,
-                       ncol = 4,
-                       nrow = nrow(tmp.grid))
-  tmp.errors <- as.data.frame(tmp.errors)
-  colnames(tmp.errors) [1:4] <- c('Err.tot', 'Err.1', 'Err.2', 'Err.3')
-  clas.cv.test.errors <- cbind(tmp.errors, tmp.grid)
-  
-  # loop : fit model to different model parameter(s) in CV
-  for(i in 1:nrow(clas.cv.test.errors)){
-    tmp.fold_id <-          clas.cv.test.errors$test.fold_id[i]
-    tmp.param   <- list(k = clas.cv.test.errors$param.k[i])
-    
-    tmp.data.test  <- TPN1_a22_clas_app[tmp.cv.test.fold_id == tmp.fold_id,]
-    tmp.data.train <- TPN1_a22_clas_app[tmp.cv.test.fold_id != tmp.fold_id,]
-    
-    # loop : fit model to different model parameter(s)
-    tmp.fit <- f_clas_knn(train = tmp.data.train,
-                          test  = tmp.data.test,
-                          parameters = tmp.param)
-      
-    clas.cv.test.errors[i, 1:4] <- c(tmp.fit$test.error.total,
-                                     tmp.fit$test.error.within_class)
-  }
-  
-  print("result")
-  head(clas.cv.test.errors)
-  
-  print("best parameter k : ")
-  clas.cv.test.errors %>% 
-    group_by(param.k) %>% 
-    summarise(avg.Err.tot = mean(Err.tot)) %>% 
-    filter(avg.Err.tot == min(avg.Err.tot))
-}
-
-clas.cv.test.errors %>% 
-  ggplot(mapping = aes(x = param.k, group = test.fold_id)) +
-  xlab("#Neighbours") + ylab("Error rate") +
-  geom_line(aes(y = Err.tot, color = "Test Err (Total)")) + 
-  geom_line(aes(y = Err.1  , color = "Test Err in class 1"), linetype = "dashed", alpha = 0.5) +
-  geom_line(aes(y = Err.2  , color = "Test Err in class 2"), linetype = "dashed", alpha = 0.5) +
-  geom_line(aes(y = Err.3  , color = "Test Err in class 3"), linetype = "dashed", alpha = 0.5) +
-  theme_light()
-
-clas.cv.test.errors %>% 
-  group_by(param.k) %>% 
-  summarise(avg.Err.tot = mean(Err.tot),
-            avg.Err.1   = mean(Err.1),
-            avg.Err.2   = mean(Err.2),
-            avg.Err.3   = mean(Err.3)) %>% 
-  ggplot(mapping = aes(x = param.k)) +
-  ggtitle(paste0("Plot of Average error in ", clas.cv.k_folds, "-fold CV")) +
-  xlab("#Neighbours") + ylab("Avg Error rate (Cross-Validation)") +
-  geom_line(aes(y = avg.Err.tot , color = "Test Err (Total)")) + 
-  geom_line(aes(y = avg.Err.1   , color = "Test Err in class 1"), linetype = "dashed", alpha = 1) +
-  geom_line(aes(y = avg.Err.2   , color = "Test Err in class 2"), linetype = "dashed", alpha = 1) +
-  geom_line(aes(y = avg.Err.3   , color = "Test Err in class 3"), linetype = "dashed", alpha = 1) +
-  theme_light()
-
-```
-
-After k-fold =5, we obtained optimal results at KNN k=11 with an error rate of 0.41.
-
-### k_f-fold validation with k=10
+### k-folds validation with k=10
 
 ```{r KNN CV10, echo=FALSE, message=FALSE, warning=FALSE, out.width="50%"}
 
@@ -640,42 +546,29 @@ After k-fold =10, we obtained optimal results at KNN k=15 with an error rate of 
 
 ## Model Selection for parametric methods
 
-### Forward and backward regression
+### Forward and backward regression, significant parameters and Lasso regression
 
-In order to use QDA, LDA, naive bayes, and logistic regression we can try to see if model selection can be useful for us.
-
-Using linear regression, backward selection and forward selection, along with lasso regression, we found those formulas:
+In order to use QDA, LDA, naive bayes, and logistic regression we can try to see if model selection can be useful for us. Using linear regression, backward selection and forward selection, along with lasso regression, we found those formulas:
 
 ```{r eval=FALSE}
-formula <- c(y~.)
-formula <- append(formula, y~X26+X44+X47+X40+X24+X19+X16+X5) # with selection of significant parameters of linear regression
-formula <- append(formula, y ~ X1 + X3 + X5 + X6 + X16 + X17 + X19 + X22 + X23 + X24 + X26 + X28 + X30 + X33 + X38 + X40 + X41 + X42 + X44 + X47) # With backward and forward selection (same model)
-formula <- append(formula, y ~ X1 + X3 + X5 + X6 + X16 + X19 + X24 + X26 + X28 + X40 + X44 + X47) # with coefficients extraction of the LASSO model
+formula<-c(y~.)
+formula<-append(formula, y~X26+X44+X47+X40+X24+X19+X16+X5) # with selection of significant parameters
+formula<-append(formula, y ~ X1+X3+X5+X6+X16+...) # With backward and forward selection (same model)
+formula<-append(formula, y ~ X1+X3+X5+X6+X16+...) # with coefficients extraction of the LASSO model
 
 ```
 
 However:
 
--   The linear model had a adjusted R² of 0.04436, so it can't be reliable.
-
--   The best predictor of the backward/forward selection had a adjusted R² of 0.099, that is to say that the model is unreliable.
-
+-   The linear model had an adjusted R² of 0.04436, so it can't be reliable.
+-   The best models of the backward/forward selections had an adjusted R² of 0.099, *i.e.* the model is unreliable.
 -   For the lasso regression, along for the two other formulas, we always found worst error rates with all the classifications methods used.
 
 That is to say that, although we tried classification with all the four models, the three with coefficients selection couldn't help us.
 
 ### Principal component analysis
 
-We tried to use PCA to see if it is also relevant to reduce dimensionnality in our model.
-
-```{r eval=FALSE}
-X <- clas.set[1:50]
-X<-scale(X) # Scale to improve PCA
-pca<-princomp(X)
-Z<-pca$scores
-lambda<-pca$sdev^2
-plot(cumsum(lambda)/sum(lambda),type="l",xlab="q",ylab="proportion of explained variance")
-```
+We tried to use PCA to see if it is also relevant to reduce dimensionality in our model. We got this result of the explained variance of the model according to the number of dimensions, reduced thanks to PCA method :
 
 ```{r , out.width="50%",echo=FALSE}
 X <- TPN1_a22_clas_app[1:50]
@@ -688,7 +581,9 @@ plot(cumsum(lambda)/sum(lambda),type="l",xlab="q",ylab="proportion of explained 
 
 We generally find no relevant analysis on PCA, as the curve really plummet onto 0 explained variance, so it is difficult to find a trade-off to have a good explained variance and a small number of dimensions.
 
-## QDA
+## Parametric methods
+
+### QDA
 
 ```{r message=FALSE, warning=FALSE,echo=FALSE}
 source("scripts/f_clas_qda.R")
@@ -699,24 +594,18 @@ source("scripts/f_clas_qda.R")
 
 ```{r eval=FALSE}
 clas.set$y <- as.factor(clas.set$y)
-
 fit.qda  <- qda(y ~ ., data=data.train)
 pred.qda <- predict(fit.qda, newdata=data.test)
 perf.qda <- table(data.test$y, pred.qda$class)
-sum (diag(perf.qda)) / n_test 
-err.qda <- 1-sum (diag(perf.qda)) / n_test
+err.qda <- 1 - sum (diag(perf.qda)) / n_test # the matrix diagonal sum of good predictions
 ```
 
-After one QDA, we obtained an error rate of 0.38, which is already better than the optimal KNN result.
+After one QDA classification, we obtained an error rate of 0.38, which is already better than the optimal KNN result. We used the K-Fold Cross Validation to have a more precise result on the robustness of the QDA model. We exposed the methodology on `1.4.3` how we implement it. We found a global error rate of **0.3205** for the QDA, thanks to the 10-Folds cross validation.
 
-We used the K-Fold Cross Validation to have a more precise result on the robustness of the QDA model.
 
-## QDA with K-fold validation
-
-```{r eval=FALSE}
+```{r include=FALSE, eval=FALSE}
 K<-10
 err = rep(0,4)
-par(mfrow = c(2, 2))
 for (i in (1:4)){
   CV <- rep(0,10)
   folds=sample(1:K,n_clas,replace=TRUE)
@@ -727,74 +616,25 @@ for (i in (1:4)){
     CV[k]<-1-sum(diag(conf))/nrow(clas.set[folds==k,])
   }
   CV_mean<-mean(CV)
-  plot(CV, type="l")
   err[i] <- CV_mean
 }
-err.qda = min(err) # We find the complete model (y~.) gives the best error rate
+err.qda = min(err) # We find that the complete model (y ~ .) gives the best accuracy
 ```
 
-We found a global error rate of **0.3205** for the QDA, thanks to the 10-Folds cross validation.
 
-## LDA
+### LDA
 
-We show directly how we use the LDA methods with K-Folds Cross validation to evaluate the error rate with the classification method. We use the `lda` function instead.
+We also used the LDA methods with K-Folds Cross validation to evaluate the error rate with the classification method. We use the `lda` function instead.
 
-We found an mean error rate across all 10 folds of **0.4148** using LDA, on one realization, that is bigger error rate than the one of QDA method.
+We found an mean error rate across all 10 folds of **0.4148** using LDA, on one realization, that is a bigger error rate than the one of QDA method.
 
-## Naive Bayes
+### Naive Bayes
 
-We then tried to use the QDA naive bayes method to see if it predicts better than the others.
+We then tried to use the QDA naive bayes method to see if it predicts better than the others. This time we found, for one realization of 10-Folds cross validation for Naive Bayes method on our data set, of 0.3509.
 
-```{r eval=FALSE}
-K<-10
-err = rep(0,4)
-par(mfrow = c(2, 2))
-for (i in (1:4)){
-  CV <- rep(0,10)
-  folds=sample(1:K,n_clas,replace=TRUE)
-  for(k in (1:K)){
-    class<-naive_bayes(formula[[i]],data=clas.set[folds!=k,])
-    pred<-predict(class,newdata=clas.set[folds==k,][1:50])
-    conf <- table(clas.set[folds==k,]$y, pred)
-    CV[k]<-1-sum(diag(conf))/nrow(clas.set[folds==k,])
-  }
-  CV_mean<-mean(CV)
-  err[i] <- CV_mean
-}
-err.naiveqda = min(err)
-```
+### Multinomial logistic regression
 
-This time we found, for one realization of 10-Folds cross validation for Naive Bayes method on our data set, of 0.3509.
-
-## Multinomial logistic regression
-
-Here, our data have the classes c \> 2, so we used the "Multinomial logistic regression" method.
-
-```{r eval=FALSE}
-K<-10
-err = rep(0,4)
-par(mfrow = c(2, 2))
-
-for (i in (1:4)){
-  CV <- rep(0,10)
-  folds=sample(1:K,n_clas,replace=TRUE)
-  for(k in (1:K)){
-    class<-multinom(formula[[i]],data=clas.set[folds!=k,])
-    pred<-predict(class,newdata=clas.set[folds==k,])
-    conf <- table(clas.set[folds==k,]$y, pred)
-    CV[k]<-1-sum(diag(conf))/nrow(clas.set[folds==k,])
-    #  class<-qda(y~.,data=clas.set[folds==k,])
-    #  pred<-predict(class,newdata=clas.set[folds==k,])
-    #  conf <- table(clas.set[folds==k,]$y, pred$class)
-    #  CV2<-CV2+1-sum(diag(conf))/nrow(clas.set[folds==k,])
-  }
-  CV_mean<-mean(CV)
-  err[i] <- CV_mean
-}
-err.naiveqda = min(err)
-```
-
-This time, error rates for one realization of the K-Folds CV with the multinomial logistic regression is of \*\*0.4212\*\*.
+Here, our data have the number of classes c \> 2, so we used the "Multinomial logistic regression" method. This time, error rates for one realization of the K-Folds CV with the multinomial logistic regression is of \*\*0.4212\*\*.
 
 ## ROC Curves
 
@@ -845,8 +685,8 @@ roc.naive<-roc(data.test$y,pred.naiveqda[,1])
 ```
 
 
-The area under the curve (AUC) of QDA ROC Curve is really low (close to 0.5). It means that in this case, QDA cannot be reliable. The best that we find is Naive Bayes and that is also the case for the error rate, so Naive Bayes method is best to choose (we couldn't plot logistic regression with pROC library, but we already now it has a high average error rate).
+The area under the curve (AUC) of QDA ROC Curve is really low (close to 0.5). It means that in this case, QDA cannot be reliable, we exclude it from our list of methods to be used. The best that we find is Naive Bayes and that is almost also the case for the error rate, so Naive Bayes method is best to choose (we couldn't plot logistic regression with pROC library, but we already now it has a high average error rate compared to the rest).
 
 ## Summary for classification
 
-As we have the lowest error rate (about 0.33) and and good ROC curve for the Naive Bayes method, we choose this method.
+As we have the lowest error rate (about 0.33) and and good ROC curve for the Naive Bayes method, we choosed this method to predict classification on our data set.

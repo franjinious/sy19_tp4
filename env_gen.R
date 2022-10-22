@@ -1,6 +1,7 @@
 
 # Classification ---------------------------------------
-library(MASS)
+library(naivebayes)
+
 
 clas.set <- read.csv("data/TPN1_a22_clas_app.txt", sep="")
 
@@ -11,22 +12,16 @@ n_test <- n_clas - n_train
 
 set.seed(19)
 id_train <- sample(1:n_clas, n_train)
-data.train <- clas.set[  id_train,]
-data.test <- clas.set[- id_train,]
-y.test <- clas.set[-id_train, c(51)]
-y.train <- clas.set[id_train, c(51)]
+data.test.cls <- clas.set[- id_train,] # for us to have a test set
 
 
-data.train$y <- factor(data.train$y)
+clas.set$y <- factor(clas.set$y)
 
-model.cls  <- naive_bayes(y ~ ., data=data.train)
+model.cls  <- naive_bayes(y ~ ., data=clas.set)
 
 
 prediction_cls <- function(dataset) {
-  #load("env.Rdata")
-  library(MASS)
   library(naivebayes)
-  
   predictions <- predict(model.cls, newdata=dataset[1:50])
   perf.naiveqda <- table(dataset$y, predictions)
   perf.naiveqda
@@ -36,11 +31,12 @@ prediction_cls <- function(dataset) {
   
   return(predictions)
 }
-pred <- prediction_cls(data.test)
+pred.cls <- prediction_cls(data.test.cls)
 
 # Regression -------------------------------------------
 
-library(MASS)
+#Préparation de données pour Lasso
+
 reg.set <- read.table('data/TPN1_a22_reg_app.txt', header = TRUE)
 
 train.percentage <- 2/3
@@ -50,47 +46,51 @@ n_test <- n_reg - n_train
 set.seed(69)
 id_train <- sample(n_reg, n_train)
 
-data.train <- reg.set[id_train,]
-data.test <- reg.set[-id_train,]
-y.test <- reg.set[-id_train, c(101)]
-y.train <- reg.set[id_train, c(101)]
+data.test.reg <- reg.set[-id_train,] # for us to have a test set
 
 
-
+library(glmnet)
+library(Matrix)
 x<-model.matrix(y~.,reg.set)
 y<-reg.set$y
-data.train.regu <- x[id_train,]
-y.train.regu <- y[id_train]
-data.test.regu <- x[-id_train,]
-y.test.regu <- y[-id_train]
 
 
-cv.out.lasso <- cv.glmnet(data.train.regu, y.train.regu, alpha = 1)
+data.test.reg <- data.test
+
+cv.out.lasso <- cv.glmnet(x, y, alpha = 1)
 plot(cv.out.lasso)
-model.reg <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.lasso$lambda.min, alpha = 1)
+model.reg <- glmnet(x, y, lambda = cv.out.lasso$lambda.min, alpha = 1)
+cv.out.lasso <- cv.glmnet(x, y, alpha = 1)
+
 
 prediction_reg <- function(dataset) {
-  #load("env.Rdata")
-  library(MASS)
   library(glmnet)
-  
-  dataset.x <- dataset[-101]
-  
-  dataset.matrix = cbind("(Intercept)" = rep(1,167),as.matrix(dataset.x))
-  
-  predictions <- predict(model.reg, s = 0.3176887, newx = dataset.matrix)
-  mse.lasso <- mean((predictions - dataset$y) ^ 2)#178
-  print("La MSE est:")
-  print(mse.lasso)
-  return(predictions)
+  library(Matrix)
+  x<-model.matrix(y~.,dataset)
+  predictions <- predict(model.reg, s = 0.2419425, newx = x) # the value is lambda min
+  print(mean((predictions - dataset$y) ^ 2))
+  return(as.numeric(predictions))
 }
-pred <- prediction_reg(data.test)
 
+pred.reg <- prediction_reg(data.test.reg)
+
+# without test set (to submit)
 save(
   "model.reg",
   "model.cls",
   "prediction_reg",
   "prediction_cls",
   file = "env.Rdata"
+)
+
+# with the test set (for us)
+save(
+  "model.reg",
+  "model.cls",
+  "data.test.reg",
+  "data.test.cls",
+  "prediction_reg",
+  "prediction_cls",
+  file = "env_test.Rdata"
 )
 

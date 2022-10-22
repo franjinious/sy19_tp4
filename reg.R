@@ -278,5 +278,33 @@ prediction_reg <- function(dataset) {
   print(mse.lasso)
   return(predictions)
 }
+reg.set <- read.table('TPN1_a22_reg_app.txt', header = TRUE)
+
+# Seconde version qui retourne des numeric
+
+#Préparation de données pour Lasso
+library(glmnet)
+library(Matrix)
+x<-model.matrix(y~.,reg.set)
+y<-reg.set$y
+
+
+data.test.reg <- data.test
+
+cv.out.lasso <- cv.glmnet(x, y, alpha = 1)
+plot(cv.out.lasso)
+model.reg <- glmnet(x, y, lambda = cv.out.lasso$lambda.min, alpha = 1)
+cv.out.lasso <- cv.glmnet(x, y, alpha = 1)
+
+
+prediction_reg <- function(dataset) {
+  library(glmnet)
+  library(Matrix)
+  x<-model.matrix(y~.,dataset)
+  predictions <- predict(model.reg, s = 0.2419425, newx = x) # the value is lambda min
+  print(mean((predictions - dataset$y) ^ 2))
+  return(as.numeric(predictions))
+}
+
 pred <- prediction_reg(data.test)
 

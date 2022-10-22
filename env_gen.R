@@ -23,12 +23,6 @@ model.cls  <- naive_bayes(y ~ ., data=clas.set)
 prediction_cls <- function(dataset) {
   library(naivebayes)
   predictions <- predict(model.cls, newdata=dataset[1:50])
-  perf.naiveqda <- table(dataset$y, predictions)
-  perf.naiveqda
-  err.naiveqda <- 1-sum(diag(perf.naiveqda)) / nrow(dataset)
-  print("taux d'erreur avec Naive Bayes:")
-  print(err.naiveqda)
-  
   return(predictions)
 }
 pred.cls <- prediction_cls(data.test.cls)
@@ -37,7 +31,7 @@ pred.cls <- prediction_cls(data.test.cls)
 
 #Préparation de données pour Lasso
 
-reg.set <- read.table('data/TPN1_a22_reg_app.txt', header = TRUE)
+reg.set <- read.table('data/TPN1_a22_reg_app.txt')
 
 train.percentage <- 2/3
 n_reg <- nrow(reg.set)
@@ -54,7 +48,6 @@ library(Matrix)
 x<-model.matrix(y~.,reg.set)
 y<-reg.set$y
 
-
 cv.out.lasso <- cv.glmnet(x, y, alpha = 1)
 plot(cv.out.lasso)
 model.reg <- glmnet(x, y, lambda = cv.out.lasso$lambda.min, alpha = 1)
@@ -64,7 +57,9 @@ cv.out.lasso <- cv.glmnet(x, y, alpha = 1)
 prediction_reg <- function(dataset) {
   library(glmnet)
   library(Matrix)
+  names(dataset)[length(dataset)]<-"y" 
   x<-model.matrix(y~.,dataset)
+  x <- cbind(x,rep(1,nrow(dataset)))
   predictions <- predict(model.reg, s = 0.2419425, newx = x) # the value is lambda min
   print(mean((predictions - dataset$y) ^ 2))
   return(as.numeric(predictions))

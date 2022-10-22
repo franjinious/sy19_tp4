@@ -24,6 +24,7 @@ model.cls  <- naive_bayes(y ~ ., data=data.train)
 
 prediction_cls <- function(dataset) {
   #load("env.Rdata")
+  library(MASS)
   library(naivebayes)
   
   predictions <- predict(model.cls, newdata=dataset[1:50])
@@ -70,6 +71,7 @@ model.reg <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.lasso$lambda.
 
 prediction_reg <- function(dataset) {
   #load("env.Rdata")
+  library(MASS)
   library(glmnet)
   
   dataset.x <- dataset[-101]

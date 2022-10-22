@@ -9,6 +9,7 @@ output:
     number_sections: true
     df_print: kable
     highlight: tango
+    latex_engine: xelatex
 ---
 
 # Regression data set
@@ -16,13 +17,23 @@ output:
 ## data import, exploration and partitioning
 
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(MASS)
+library(pls)
+library(leaps)
+library(dplyr)
+library(FNN)
+library(glmnet)
+```
+```{r out.width="50%"}
 reg.set <- read.table('data/TPN1_a22_reg_app.txt', header = TRUE)
 
 # exploration
 boxplot(as.data.frame(reg.set[1:100]))
+```
+The range of the variables is between 0 and 10.
 
+```{r}
 train.percentage <- 2/3 #train partitioning
 n_reg <- nrow(reg.set)
 n_train <- as.integer(n_reg * train.percentage)
@@ -39,69 +50,252 @@ y.train <- reg.set[id_train, c(101)]
 
 ### PCA
 
-```{r}
+```{r out.width="50%"}
 library(pls)
 pcr_model <- pcr(y~., data = data.test, validation = "CV")
 validationplot(pcr_model, val.type="MSEP")
 ```
 
-According to the graph, we see that we need all variables to have the best model.
+Looking at the graph, we can conclude that all the variables are needed to have an optimal performance, so this method is rejected.
 
-### Modèle linéaire
+### Linear model
 
-```{r eval=FALSE}
+```{r}
 reg.set.lm <- lm(formula = y ~., data = data.train)
-summary(reg.set.lm) # We have  small p-value and a relatively big R-Square
-res_std <- rstandard(reg.set.lm)
-plot(x = y.train, y = res_std) # we observe 
-abline(0, 0)
-pre.lm <- predict(reg.set.lm, newdata = data.test)
-mse.lm <- mean((pre.lm - y.test) ^ 2)#200.176
-# We do the regression again with significative
-reg.set.lm.revise <- lm(formula = y~X6+X11+X12+X15+X17+X22+X23+X25+X27+X32+X33+X35+X37+X39+X46+X47+X48+X49+X52+X54+X56+X59+X60+X63+X68+X70+X72+X74+X79+X83+X84+X87+X88+X89+X90+X91+X96
-                        , data = data.train)
-pre.lm.revise <- predict(reg.set.lm.revise, newdata = data.test)
-mse.lm1 <- mean((pre.lm.revise - y.test) ^ 2)#200.176
 ```
+```{r eval=FALSE}
+summary(reg.set.lm) # We have  small p-value and a relatively big R-Square
+```
+From the summary, the general linear model has already a very little p-value and an optimal R²: 0.9626.
 
-We got a R² of 0.9626 in the linear model with a really small p-value (\< 2.2e-16). We got a mean squared error (MSE) of 200.176.
+```{r}
+pre.lm <- predict(reg.set.lm, newdata = data.test)
+mse.lm <- mean((pre.lm - y.test) ^ 2)
+```
+We got a mean squared error (MSE) of 200.176.
+Also, plotting the standard residuals we see that there is no apparent correlation.
 
-Doing again the linear regression we got a R² of 0.9429 and a MSE of 246.1544, which is a bit worse, as predicted with the PCA analysis (it is better to keep all coefficient).
+We did the regression again with the significant variables:
+```{r}
+reg.set.lm.revise <- lm(formula = y~X6+X11+X12+X15+X17+X22+X23+X25+X27+X32+X33+X35+X37+X39+X46+X47+X48+X49+X52+X54+X56+X59+X60+X63+X68+X70+X72+X74+X79+X83+X84+X87+X88+X89+X90+X91+X96, data = data.train)
+pre.lm.revise <- predict(reg.set.lm.revise, newdata = data.test)
+mse.lm1 <- mean((pre.lm.revise - y.test) ^ 2)
+```
+We got a R² of 0.9429 and a MSE of 246.1544, which is a bit worse.
+
+
 
 ## Subset selection
 
-We even though still want to try with the Backward and Forward selection method what we have in we regress our data in a model.
+## KNN using the significant variables
+In this part, we try the KNN method with the full model. We use the data **with and without scaling**.
 
-```{r eval=FALSE}
-library(leaps)
-library(dplyr)
+```{r include=FALSE}
+x.app_k <- data.train[, c(-101)] 
+y.app_k <- data.train[, c(101)]
+x.test_k <- data.test[, c(-101)]
+x.app_k.scale <- scale(data.train[, c(-101)] )
+x.test_k.scale <- scale(data.test[, c(-101)])
+
+```
+
+```{r out.width="50%"}
+knn_k_max <- 37
+
+tmp <- sapply(1:knn_k_max, function(local_k){
+  reg.knn.noscale <- knn.reg(train = x.app_k, test = x.test_k, y = y.app_k, k = local_k)
+  res <- mean((reg.knn.noscale$pred - y.test) ^ 2)
+  return(res)
+})
+
+tmp.scale <- sapply(1:knn_k_max, function(local_k){
+  reg.knn.scale <- knn.reg(train = x.app_k.scale, test = x.test_k.scale, y = y.app_k, k = local_k)
+  res.scale <- mean((reg.knn.scale$pred - y.test) ^ 2)
+  return(res.scale)
+})
+
+knn_MSE_noscale <- tmp
+knn_MSE_scale <- tmp.scale # global error
+plot(1:knn_k_max, knn_MSE_noscale, type='b', col='blue', ylim=range(knn_MSE_scale), xlab='k', ylab='MSE', lty = 1, pch = 1)
+
+lines(1:knn_k_max, knn_MSE_scale, type='b', col='red', lty = 1, pch = 1)
+```
+
+
+```{r echo=FALSE, out.width="50%"}
+data.frame("which.min(knn_MSE_scale)" = which.min(knn_MSE_scale),
+           "min(knn_MSE_scale)" = min(knn_MSE_scale),
+           "which.min(knn_MSE_noscale)" = which.min(knn_MSE_noscale),
+           "min(knn_MSE_noscale)" = min(knn_MSE_noscale))
+```
+
+The minimum MSE is 3707.
+
+## Subset selection
+Due to the fact that there is too many variables, we can't use the best subset selection.
+
+### Forward selection
+
+To do this, we use regsubsets to find the significant variables with which we can reach a best adjr2.
+```{r}
 reg.selection.forward <- regsubsets(y~., data = data.train, method = "forward", nbest = 1, nvmax = 100)
 summary_forward <- summary(reg.selection.forward)
-plot(reg.selection.forward, scale = "bic")#Regarder bri??vement la plus grande adjusted R Square
+```
+From summary_forward, we can get a list of potential models. To choose which is best suited, we compare the adjusted determination coefficient of each model. This value gives us the possibility to measure the quality of the linear regression.
 
+```{r}
 rss<-data.frame(summary_forward$outmat, RSS=summary_forward$rss)
-rsquare_max_forward <- summary_forward$outmat[which.max(summary_forward$adjr2),]#La ligne avec la plus grande adjr2
+rsquare_max_forward <- summary_forward$outmat[which.max(summary_forward$adjr2),]
+#La ligne avec la plus grande adjr2
 rsquare_max_forward[rsquare_max_forward == '*'] <- as.numeric(1)
 rsquare_max_forward[rsquare_max_forward == ' '] <- as.numeric(0)
-rsquare_max_forward <- as.numeric(rsquare_max_forward)#Le masque pour s??lectionner les variables
+rsquare_max_forward <- as.numeric(rsquare_max_forward)
+#Le masque pour sélectionner les variables
 reg.subset.forward <- reg.set[c(rsquare_max_forward==1)]
+```
+rsquare_max_forward is therefore a vector containing integers between 0 and 1 (1 for the columns to keep in the model and 0 for the columns to discard). We filter the data with it.
 
-
+```{r}
 n.subset.forward <- nrow(reg.subset.forward)
 set.seed(69)
 n.subset.forward.train <- as.integer(train.percentage * n.subset.forward)
 n.subset.forward.sample <- sample(n.subset.forward, n.subset.forward.train)
 reg.subset.forward.train <- reg.subset.forward[n.subset.forward.sample,]
 reg.subset.forward.test <- reg.subset.forward[-n.subset.forward.sample,]
-reg.subset.forward.lm <- lm(formula = y~., data = reg.subset.forward.train)
-reg.subset.forward.lm.predict <- predict(reg.subset.forward.lm, newdata = reg.subset.forward.test)
-reg.subset.forward.mse <- mean((reg.subset.forward.lm.predict - reg.subset.forward.test$y) ^ 2) #MSE = 188.44
-reg.subset.forward.err <- rstandard(reg.subset.forward.lm)
-plot(reg.subset.forward.train$y, reg.subset.forward.err)
-abline(0, 0)
+
 ```
 
-We did the same for Backward selection. We then have
+```{r}
+reg.subset.forward.lm <- lm(formula = y~., data = reg.subset.forward.train)
+reg.subset.forward.lm.predict <- predict(reg.subset.forward.lm, newdata = reg.subset.forward.test)
+reg.subset.forward.mse <- mean((reg.subset.forward.lm.predict - reg.subset.forward.test$y) ^ 2)#188.44
+```
+The MSE is 188.44.
+
+### Backward selection
+We use the same method previously mentioned to find the variables, with the `backward` attribute of method in the `regsubset` function.
+```{r include=FALSE}
+reg.selection.backward <- regsubsets(y~., data = data.train, method = "backward", nbest = 1, nvmax = 100)
+summary_backward <- summary(reg.selection.backward)
+plot(reg.selection.backward, scale = "adjr2")
+#rss<-data.frame(summary_forward$outmat, RSS=summary_forward$rss)
+rsquare_max_backward <- summary_backward$outmat[which.max(summary_backward$adjr2),]
+rsquare_max_backward[rsquare_max_backward == '*'] <- as.numeric(1)
+rsquare_max_backward[rsquare_max_backward == ' '] <- as.numeric(0)
+rsquare_max_backward <- as.numeric(rsquare_max_backward)
+reg.subset.backward <- reg.set[c(rsquare_max_backward==1)]
+```
+```{r include=FALSE}
+n.subset.backward <- nrow(reg.subset.backward)
+set.seed(69)
+n.subset.backward.train <- as.integer(train.percentage * n.subset.backward)
+n.subset.backward.sample <- sample(n.subset.backward, n.subset.backward.train)
+reg.subset.backward.train <- reg.subset.backward[n.subset.backward.sample,]
+reg.subset.backward.test <- reg.subset.backward[-n.subset.backward.sample,]
+reg.subset.backward.lm <- lm(formula = y~., data = reg.subset.backward.train)
+reg.subset.backward.lm.predict <- predict(reg.subset.backward.lm, newdata = reg.subset.backward.test)
+reg.subset.backward.mse <- mean((reg.subset.backward.lm.predict - reg.subset.backward.test$y) ^ 2)#186.92
+```
+The MSE found is of 186.92 which is best. To test the goodness of the method, we will use the K-Folds cross validation on it.
+
+### K-Cross validation de Backward selection
+To validate the model we have chosen, we have a K-Fold cross-validation. We will compare the different values obtained using the method with other potential models.
+```{r include=FALSE}
+Formula <- c(y~.-X2, 
+             y~.-X2-X5, 
+             y~.-X2-X5-X7, 
+             y~.-X2-X5-X7-X8,
+             y~.-X2-X5-X7-X8-X9,
+             y~.-X2-X5-X7-X8-X9-X10, 
+             y~.-X2-X5-X7-X8-X9-X10-X16, 
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19, 
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20, 
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73-X76,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73-X76-X77,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73-X76-X77-X78,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73-X76-X77-X78-X79,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73-X76-X77-X78-X79-X81,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73-X76-X77-X78-X79-X81-X85,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73-X76-X77-X78-X79-X81-X85-X93,
+             y~.-X2-X5-X7-X8-X9-X10-X16-X18-X19-X20-X28-X30-X34-X38-X40-X41-X44-X53-X55-X57-X61-X64-X65-X66-X67-X73-X76-X77-X78-X79-X81-X85-X93-X97
+)
+
+```
+
+```{r}
+K <- 10
+fold <- sample(K, n_train, replace = TRUE)
+CV <- rep(0, 10)
+for (i in (1:10)){
+  for (k in (1:K)){
+    reg.cross<-lm(Formula[[i]],data=reg.set[fold!=k,])
+    pred.cross <- predict(reg.cross, newdata=reg.set[fold == k,])
+    CV[i]<-CV[i]+ sum((reg.set$y[fold==k]-pred.cross)^2)
+  }
+  CV[i]<-CV[i] / n_reg
+}
+CV.min = min(CV) #181
+
+```
+We obtain the lowest value of the MSE for the model we had chosen (a mean of 181).
+
+## Ridge Regression
+```{r include=FALSE }
+x<-model.matrix(y~.,reg.set)
+y<-reg.set$y
+data.train.regu <- x[id_train,]
+y.train.regu <- y[id_train]
+data.test.regu <- x[-id_train,]
+y.test.regu <- y[-id_train]
+
+```
+
+```{r out.width="50%"}
+cv.out.ridge <- cv.glmnet(data.train.regu, y.train.regu, alpha = 0)
+#plot(cv.out.ridge)
+fit.ridge <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.ridge$lambda.min, alpha = 0)
+ridge.predict <- predict(fit.ridge, s = cv.out.ridge$lambda.min, newx = data.test.regu)
+mse.ridge <- mean((ridge.predict - y.test.regu) ^ 2)#200.44
+```
+With this method, we obtain an MSE of 200.44.
+
+## Lasso regression
+```{r out.width="50%"}
+cv.out.lasso <- cv.glmnet(data.train.regu, y.train.regu, alpha = 1)
+#plot(cv.out.lasso)
+fit.lasso <- glmnet(data.train.regu, y.train.regu, lambda = cv.out.lasso$lambda.min, alpha = 1)
+lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = data.test.regu)
+mse.lasso <- mean((lasso.predict - y.test.regu) ^ 2)#178
+```
+With this method, we obtain an MSE of 178.13.
+
+# Conclusion
+```{r include=FALSE}
+mse.knn.scale <- min(knn_MSE_scale)
+mse.knn.noscale <- min(knn_MSE_noscale)
+```
+
+```{r}
+cbind(mse.lm, mse.lm1, mse.knn.scale, mse.knn.noscale, reg.subset.forward.mse, reg.subset.backward.mse, CV.min, mse.ridge, mse.lasso)
+```
+
 
 # Classification data set
 
@@ -541,29 +735,7 @@ We found a global error rate of **0.3205** for the QDA, thanks to the 10-Folds c
 
 ## LDA
 
-We show directly how we use the LDA methods with K-Folds Cross validation to evaluate the error rate of the
-
-## LDA with K-fold validation
-
-```{r eval=FALSE}
-K<-10
-err = rep(0,4)
-par(mfrow = c(2, 2))
-
-for (i in (1:4)){
-  CV <- rep(0,10)
-  folds=sample(1:K,n_clas,replace=TRUE)
-  for(k in (1:K)){
-    class<-lda(formula[[i]],data=clas.set[folds!=k,])
-    pred<-predict(class,newdata=clas.set[folds==k,])
-    conf <- table(clas.set[folds==k,]$y, pred$class)
-    CV[k]<-1-sum(diag(conf))/nrow(clas.set[folds==k,])
-  }
-  CV_mean<-mean(CV)
-  err[i] <- CV_mean
-}
-err.lda = min(err) # We find the complete model (y~.) gives the best error rate
-```
+We show directly how we use the LDA methods with K-Folds Cross validation to evaluate the error rate with the classification method. We use the `lda` function instead.
 
 We found an mean error rate across all 10 folds of **0.4148** using LDA, on one realization, that is bigger error rate than the one of QDA method.
 
@@ -572,8 +744,6 @@ We found an mean error rate across all 10 folds of **0.4148** using LDA, on one 
 We then tried to use the QDA naive bayes method to see if it predicts better than the others.
 
 ```{r eval=FALSE}
-clas.set$y <- factor(clas.set$y)
-
 K<-10
 err = rep(0,4)
 par(mfrow = c(2, 2))
@@ -626,10 +796,55 @@ This time, error rates for one realization of the K-Folds CV with the multinomia
 
 ## ROC Curves
 
+```{r, echo=FALSE, message=FALSE, warning=FALSE, out.width="50%"}
+clas.set <- read.csv("data/TPN1_a22_clas_app.txt", sep="")
+n_clas <- dim(clas.set)[1]
+train_percentage <- 4/5
+n_train <- round(n_clas* train_percentage)
+n_test <- n_clas - n_train
+
+set.seed(19)
+id_train <- sample(1:n_clas, n_train)
+
+data.train <- clas.set[  id_train,]
+data.test <- clas.set[- id_train,]
+y.test <- clas.set[-id_train, c(51)]
+y.train <- clas.set[id_train, c(51)]
+
+fit.qda  <- qda(y ~ ., data=data.train)
+pred.qda <- predict(fit.qda, newdata=data.test)
+
+fit.lda  <- lda(y ~ ., data=data.train)
+pred.lda <- predict(fit.lda, newdata=data.test)
+
+clas.set$y <- factor(clas.set$y)
+data.train$y <- factor(data.train$y)
+
+
+fit.naiveqda  <- naive_bayes(y ~ ., data=data.train)
+pred.naiveqda <- predict(fit.naiveqda, newdata=data.test[1:50])
+
+library("pROC")
+roc.lda<-roc(data.test$y,as.vector(pred.lda$posterior[,1]))
+
+roc.qda<-roc(data.test$y,as.vector(pred.qda$posterior[,1]))
+
+pred.naiveqda <- predict(fit.naiveqda, newdata=data.test[1:50], type="prob")
+
+roc.naive<-roc(data.test$y,pred.naiveqda[,1])
+{plot(roc.lda, col="blue")
+  plot(roc.naive, col='green', add=TRUE)
+  plot(roc.qda, col='red', add=TRUE)
+  legend( x = "bottomright", legend = c("LDA","QDA","Naive Bayes"), col = c("blue","red","green"), lwd = 1, lty = c(1,1), pch = c(NA,NA) )
+}
+
+
+
+```
+
+
 The area under the curve (AUC) of QDA ROC Curve is really low (close to 0.5). It means that in this case, QDA cannot be reliable. The best that we find is Naive Bayes and that is also the case for the error rate, so Naive Bayes method is best to choose (we couldn't plot logistic regression with pROC library, but we already now it has a high average error rate).
 
 ## Summary for classification
 
 As we have the lowest error rate (about 0.33) and and good ROC curve for the Naive Bayes method, we choose this method.
-
-## 

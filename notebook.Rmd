@@ -470,7 +470,9 @@ clas.test.errors[which.min(clas.test.errors$Err.tot),]
 
 ```
 
-Observing the plot, we see that class1 has an error rate of 1 when the value of k exceeds 10, most likely because class1 is a smaller class and is therefore divided into other classes when the value of k increases. But at k = 43 we observed a minimum error rate of 0.35, which is unlikily and next we applied cross comparisons to confirm the results. \### k_f-fold validation with k=5 In the k-fold validation, firtly we choose k = 5
+Observing the plot, we see that class1 has an error rate of 1 when the value of k exceeds 10, most likely because class1 is a smaller class and is therefore divided into other classes when the value of k increases. But at k = 43 we observed a minimum error rate of 0.35, which is unlikily and next we applied cross comparisons to confirm the results. 
+
+### k_f-fold validation with k=5 In the k-fold validation, firtly we choose k = 5
 
 ```{r KNN CV, echo=FALSE, message=FALSE, warning=FALSE, out.width="50%"}
 

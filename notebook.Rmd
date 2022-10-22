@@ -17,7 +17,7 @@ output:
 ## data import, exploration and partitioning
 
 
-```{r, message=FALSE, warning=FALSE}
+```{r, message=FALSE, warning=FALSE, include=FALSE}
 library(MASS)
 library(pls)
 library(leaps)

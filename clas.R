@@ -225,24 +225,55 @@ y.train <- y[id_train]
 x.test <- x[-id_train,]
 y.test <- y[-id_train]
 
+
 cv.out.lasso <- cv.glmnet(x.train, y.train, alpha = 1)
+cv.out.lasso$lambda.min
+cv.out.lasso$lambda.1se
+
+coef2 <- coef(cv.out.lasso$glmnet.fit, s = cv.out.lasso$lambda.min,exact = F)
+coef1 <- coef(cv.out.lasso$glmnet.fit, s = cv.out.lasso$lambda.1se,exact = F)
+
+
+
 library(coefplot)
 coefs_extracted<-extract.coef(cv.out.lasso)
 coefs<-row.names(coefs_extracted)[-1]
 coefs
 plot(cv.out.lasso)
+
+
 fit.lasso <- glmnet(x.train, y.train, lambda = cv.out.lasso$lambda.min, alpha = 1)
 lasso.predict <- predict(fit.lasso, s = cv.out.lasso$lambda.min, newx = x.test)
 mse.lasso <- mean((lasso.predict - y.test) ^ 2)#178
 
-formula <- append(formula, y ~ X1 + X3 + X5 + X6 + X16 + X19 + X24 + X26 + X28 + X40 + X44 + X47)
+formula<- append(formula, y ~ X1 + X3 + X5 + X6 + X16 + X19 + X24 + X26 + X28 + X40 + X44 + X47)
 
 formula
+
+
+
+# logistics regression after lasso ----------------------------------------
+library(glmnet)
+clas.set$y <- as.numeric(clas.set$y)
+as.data.frame(data.train[coefs])
+fit.logistic_multi  <- multinom(y ~. -X5-X16-X26, data=data.train)
+pred.logistic_multi <- predict(fit.logistic_multi, newdata=data.test)
+perf.logistic_multi <- table(data.test$y, pred.logistic_multi)
+perf.logistic_multi
+sum(diag(perf.logistic_multi)) / n_test
+err.logistic_multi <- 1-sum(diag(perf.logistic_multi)) / n_test 
+err.logistic_multi
+
+
 
 #1 all coef
 #2 significaative coef
 #3 Bakward selection
 #4 Lasso regression
+
+
+
+
 
 
 # KNN with an arbitrary k ---------------------------------------------

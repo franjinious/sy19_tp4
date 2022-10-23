@@ -16,12 +16,6 @@ output:
 ```{r setup, include=FALSE}
 # Load r packages (Install if missing)
 
-if(!require(here)) install.packages("here")
-if(require(here)) {
-  setwd(here::here())
-}else{
-  warning('Make sure the package "here" is installed')
-}
 
 if(!require("tidyverse")) {
   install.packages("tidyverse")
@@ -468,7 +462,18 @@ plot(cumsum(lambda)/sum(lambda),type="l",xlab="q",ylab="proportion of explained 
 
 
 
+```{r , out.width="50%",echo=FALSE}
 
+Err.summary <- data.frame(KNN = clas.cv.test.errors$Err.tot,LDA = clas_lda.cv_repeat5$Err.tot, QDA = clas_qda.cv_repeat5$Err.tot, Naive_bayse = clas_naive_bayes.cv_repeat5$Err.tot, Logistic = clas_mulit_logistic.cv_repeat5$Err.tot)
+
+
+
+boxplot(Err.summary,ylab="Error rate" , xlab="- Method -")
+
+
+
+
+```
 
 
 

@@ -213,6 +213,34 @@ clas_mulit_logistic.cv_repeat[,1:4] %>% summary()
 require("glmnet")
 lasso.mod =glmnet (clas.data.train[,1:50] ,clas.data.train$y,alpha =1, lambda =grid)
 
+
+
+
+# avec lasso
+?multinom
+logit_multi_fit  <- nnet::multinom(y ~. -X5-X16-X26, data=clas.data.train)
+logit_multi_pred <- predict(logit_multi_fit, newdata=clas.data.test)
+logit_multi_perf <- table(clas.data.test$y, logit_multi_pred)
+logit_multi_perf
+sum(diag(logit_multi_perf))/ nrow(clas.data.test)
+1-sum(diag(logit_multi_perf)) / nrow(clas.data.test) #erreur:0.4
+
+
+source("scripts/f_clas_mulit_logistic.r")
+
+{# Repartition train & test
+  clas.test.id <- createDataPartition(TPN1_a22_clas_app$y, p = 1/5, list = TRUE)
+  clas.data.test  <- TPN1_a22_clas_app[ clas.test.id[[1]],]
+  clas.data.train <- TPN1_a22_clas_app[-clas.test.id[[1]],]
+}
+f_clas_mulit_logistic(train = clas.data.train, test = clas.data.test)
+# Cross-validation --------------------------------------------------------
+clas_mulit_logistic.cv_repeat <- f_clas_cv_repeat(f_classifier = f_clas_mulit_logistic, train = TPN1_a22_clas_app, k_folds = 5, repeats = 10)
+clas_mulit_logistic.cv_repeat[,1:4] %>% summary()
+
+require("glmnet")
+lasso.mod =glmnet (clas.data.train[,1:50] ,clas.data.train$y,alpha =1, lambda =grid)
+
 # Draft -------------------------------------------------------------------
 dat <- data.frame(xx = c(runif(100,20,50),runif(100,40,80),runif(100,0,30)),yy = rep(letters[1:3],each = 100))
 

@@ -1,6 +1,6 @@
 ---
 title: "TP4 - SY19"
-author: "Pengyu JI, Antoine Kryus, Chenxi Liu"
+author: "Pengyu JI, Antoine KRYUS, Chenxi LIU"
 subtitle: "Rapport du TP4: Régression et classification - Sélection de modèles"
 output:
   pdf_document:
@@ -69,14 +69,17 @@ reg.set.lm <- lm(formula = y ~., data = data.train)
 summary(reg.set.lm) # We have  small p-value and a relatively big R-Square
 ```
 From the summary, the general linear model has already a very little p-value and an optimal R²: 0.9626.
-
 ```{r}
 pre.lm <- predict(reg.set.lm, newdata = data.test)
 mse.lm <- mean((pre.lm - y.test) ^ 2)
 ```
 We got a mean squared error (MSE) of 200.176.
-Also, plotting the standard residuals we see that there is no apparent correlation.
+Also, plotting the standard residuals we see that there is no apparent correlation. We can test it with the Durbin-Watson test, and , with an obtaned p-value of about 1 (more than α=0.05) we can clearly consider the hypothesis H<sub>0</sub> that the residuals are independant.
 
+```{r, include=FALSE, eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+library(lmtest)
+dwtest(reg.set.lm)
+```
 ```{r include=FALSE}
 reg.set.lm.revise <- lm(formula = y~X6+X11+X12+X15+X17+X22+X23+X25+X27+X32+X33+X35+X37+X39+X46+X47+X48+X49+X52+X54+X56+X59+X60+X63+X68+X70+X72+X74+X79+X83+X84+X87+X88+X89+X90+X91+X96, data = data.train)
 pre.lm.revise <- predict(reg.set.lm.revise, newdata = data.test)
@@ -96,7 +99,7 @@ x.test_k.scale <- scale(data.test[, c(-101)])
 
 ```
 
-```{r out.width="50%"}
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width="50%"}
 knn_k_max <- 37
 tmp <- sapply(1:knn_k_max, function(local_k){
   reg.knn.noscale <- knn.reg(train = x.app_k, test = x.test_k, y = y.app_k, k = local_k)
@@ -112,6 +115,7 @@ knn_MSE_noscale <- tmp
 knn_MSE_scale <- tmp.scale # global error
 plot(1:knn_k_max, knn_MSE_noscale, type='b', col='blue', ylim=range(knn_MSE_scale), xlab='k', ylab='MSE', lty = 1, pch = 1)
 lines(1:knn_k_max, knn_MSE_scale, type='b', col='red', lty = 1, pch = 1)
+legend( x = "topright", legend = c("KNN non-scaled","KNN scaled"), col = c("blue","red"), lwd = 1, lty = c(1,1), pch = c(NA,NA) )
 ```
 
 
@@ -367,9 +371,9 @@ Y consists of three classes, the number of class1 is significantly smaller than 
 
 ## Nonparametric method: kNN
 
-The first method we choose is the non-parametric one, the KNN method. Firstly we apply KNN with an arbitrary k = 10 to have a look at general result.
+The first method we choose is the non-parametric one, the KNN method. Firstly we apply KNN with an arbitrary k = 10 to have a look at general result. We got an total error rate of **0.51**. We can find the error for each class :
 
-```{r KNN1, echo=FALSE}
+```{r KNN1, include=FALSE, echo=FALSE}
 clas.knn.k <- 10
 
 # Fit model
@@ -570,7 +574,7 @@ That is to say that, although we tried classification with all the four models, 
 
 We tried to use PCA to see if it is also relevant to reduce dimensionality in our model. We got this result of the explained variance of the model according to the number of dimensions, reduced thanks to PCA method :
 
-```{r , out.width="50%",echo=FALSE}
+```{r , out.width="40%",echo=FALSE}
 X <- TPN1_a22_clas_app[1:50]
 X<-scale(X)
 pca<-princomp(X)
@@ -630,15 +634,15 @@ We found an mean error rate across all 10 folds of **0.4148** using LDA, on one 
 
 ### Naive Bayes
 
-We then tried to use the QDA naive bayes method to see if it predicts better than the others. This time we found, for one realization of 10-Folds cross validation for Naive Bayes method on our data set, of 0.3509.
+We then tried to use the QDA naive bayes method to see if it predicts better than the others. This time we found, for one realization of 10-Folds cross validation for Naive Bayes method on our data set, of **0.3509**.
 
 ### Multinomial logistic regression
 
-Here, our data have the number of classes c \> 2, so we used the "Multinomial logistic regression" method. This time, error rates for one realization of the K-Folds CV with the multinomial logistic regression is of \*\*0.4212\*\*.
+Here, our data have the number of classes c \> 2, so we used the "Multinomial logistic regression" method. This time, error rates for one realization of the K-Folds CV with the multinomial logistic regression is of **0.4212**.
 
 ## ROC Curves
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE, out.width="50%"}
+```{r, include=FALSE, eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE, out.width="50%"}
 clas.set <- read.csv("data/TPN1_a22_clas_app.txt", sep="")
 n_clas <- dim(clas.set)[1]
 train_percentage <- 4/5
@@ -684,8 +688,8 @@ roc.naive<-roc(data.test$y,pred.naiveqda[,1])
 
 ```
 
+As the ROC curves only show the goodness of a method between two classes, we would have to do class 1 against classes 2 and 3, class 2 against class 1 and 3, and class 3 against class 2 and 1, that would not give us the goodness of fit given by the methods we used to discriminate directly 3 classes. We then shall not use it.
 
-The area under the curve (AUC) of QDA ROC Curve is really low (close to 0.5). It means that in this case, QDA cannot be reliable, we exclude it from our list of methods to be used. The best that we find is Naive Bayes and that is almost also the case for the error rate, so Naive Bayes method is best to choose (we couldn't plot logistic regression with pROC library, but we already now it has a high average error rate compared to the rest).
 
 ## Summary for classification
 

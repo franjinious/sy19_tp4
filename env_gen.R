@@ -1,6 +1,7 @@
 
 # Classification ---------------------------------------
 library(naivebayes)
+library(MASS)
 
 
 clas.set <- read.csv("data/TPN1_a22_clas_app.txt", sep="")
@@ -17,13 +18,13 @@ data.test.cls <- clas.set[- id_train,] # for us to have a test set
 
 clas.set$y <- factor(clas.set$y)
 
-model.cls  <- naive_bayes(y ~ ., data=clas.set)
+model.cls  <- qda(y ~ ., data=clas.set)
 
 
 prediction_cls <- function(dataset) {
-  library(naivebayes)
+  library(MASS)
   predictions <- predict(model.cls, newdata=dataset[1:50])
-  return(predictions)
+  return(predictions$class)
 }
 pred.cls <- prediction_cls(data.test.cls)
 

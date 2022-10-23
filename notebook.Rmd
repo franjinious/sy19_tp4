@@ -280,7 +280,7 @@ mse.lasso <- mean((lasso.predict - y.test.regu) ^ 2)#178
 We did the same to get the Lasso method (replacing `alpha=1`) that allow us to quiet some variable that could possibly be irrelevant to our model.
 With this method, we obtain an MSE of 178.13.
 
-# Conclusion
+## Conclusion
 ```{r message=FALSE, warning=FALSE,echo=FALSE}
 mse.knn.scale <- min(knn_MSE_scale)
 mse.knn.noscale <- min(knn_MSE_noscale)
@@ -364,10 +364,9 @@ In order to separate the training and test data, we chose to randomly shuffle th
 barplot(table(TPN1_a22_clas_app$y))
 
 tmp <- max(table(TPN1_a22_clas_app$y)/nrow(TPN1_a22_clas_app))
-1-tmp 
 ```
 
-Y consists of three classes, the number of class1 is significantly smaller than the number of class 2 and class 3. So if we do not do machine learning and choose the class with the largest proportion each time, our error rate will be 0.58, which will be the highest error rate we can accept
+Y consists of three classes, the number of class1 is significantly smaller than the number of class 2 and class 3. So if we do not do machine learning and choose the class with the largest proportion each time, our error rate will be **0.58**, which will be the highest error rate we can accept
 
 ## Nonparametric method: kNN
 
@@ -410,13 +409,11 @@ clas.knn.error_within_class
 
 ```
 
-The error rate reaches 0.51
-
 ### KNN with an arbitrary k
 
-Next we try to iterate over k to see if we can optimize the error rate
+Next we try to iterate over k to see if we can optimize the error rate.
 
-```{r echo=FALSE, message=FALSE, out.width="50%"}
+```{r echo=FALSE, message=FALSE, out.width="45%"}
 source("scripts/f_clas_perf.R")
 source("scripts/f_clas_knn.R")
 
@@ -688,7 +685,7 @@ roc.naive<-roc(data.test$y,pred.naiveqda[,1])
 
 ```
 
-As the ROC curves only show the goodness of a method between two classes, we would have to do class 1 against classes 2 and 3, class 2 against class 1 and 3, and class 3 against class 2 and 1, that would not give us the goodness of fit given by the methods we used to discriminate directly 3 classes. We then shall not use it.
+As the ROC curves only show the goodness of a method between two classes, we would have to do class 1 against classes 2 and 3, class 2 against class 1 and 3, etc., that would not give us the goodness of fit given by the methods we used to discriminate directly 3 classes. We then shall not use it.
 
 
 ## Summary for classification
